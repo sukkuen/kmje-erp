@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>㈜케이엠제이 수주관리</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:#f0f2f5;color:#1e293b;font-size:14px;}
+.hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 20px;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.hdr-inner{display:flex;align-items:center;max-width:1400px;margin:0 auto;}
+.logo{font-size:15px;font-weight:700;color:#1e40af;padding:12px 16px 12px 0;border-right:1px solid #e2e8f0;margin-right:4px;white-space:nowrap;}
+.tab{padding:12px 14px;border:none;background:transparent;cursor:pointer;font-size:13px;font-family:inherit;color:#64748b;border-bottom:2px solid transparent;display:flex;align-items:center;gap:5px;font-weight:400;}
+.tab.on{color:#1e293b;font-weight:500;border-bottom:2px solid #1e40af;}
+.sync-badge{margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;}
+.sync-live{background:#dcfce7;color:#166534;}
+.sync-local{background:#fef9c3;color:#854d0e;}
+.main{max-width:1400px;margin:0 auto;padding:20px;}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.kpi{background:#fff;border-radius:10px;padding:16px 18px;border:1px solid #e2e8f0;}
+.kpi-lbl{font-size:11px;color:#64748b;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.kpi-val{font-size:22px;font-weight:700;margin-bottom:2px;}
+.kpi-sub{font-size:11px;color:#94a3b8;}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.card-hdr{padding:13px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:11px;font-weight:600;color:#64748b;text-align:left;padding:8px 12px;border-bottom:1px solid #f1f5f9;background:#f8fafc;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+td{font-size:12px;padding:9px 12px;border-bottom:1px solid #f8fafc;vertical-align:middle;}
+tbody tr:hover td{background:#f8fafc;}
+tbody tr:last-child td{border-bottom:none;}
+.mono{font-family:'Courier New',monospace;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
+.b-gray{background:#f1f5f9;color:#475569;}
+.b-blue{background:#dbeafe;color:#1d4ed8;}
+.b-green{background:#dcfce7;color:#166534;}
+.b-amber{background:#fef3c7;color:#92400e;}
+.b-red{background:#fee2e2;color:#991b1b;}
+.btn{background:transparent;border:1px solid #e2e8f0;border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;color:#374151;font-family:inherit;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-weight:500;}
+.btn:hover{background:#f8fafc;}
+.btn.pri{background:#1e40af;color:#fff;border-color:#1e40af;}
+.btn.pri:hover{background:#1d3a9f;}
+.btn.sm{padding:3px 9px;font-size:11px;}
+.btn.dng{color:#dc2626;border-color:transparent;}
+.btn.dng:hover{background:#fee2e2;}
+.inp{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 9px;color:#1e293b;font-size:12px;outline:none;font-family:inherit;width:100%;}
+.inp:focus{border-color:#1e40af;background:#fff;}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;}
+.exp-area{background:#f8fafc;padding:14px 16px;}
+.sub-block{border-left:3px solid #f97316;padding-left:12px;margin-bottom:10px;background:#fff;border-radius:0 8px 8px 0;padding:10px 12px 10px 14px;}
+.sec-lbl{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;padding:30px 16px;}
+.modal{background:#fff;border-radius:12px;padding:24px;width:700px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.setup-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center;padding:40px;}
+.setup-box{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:32px;max-width:520px;width:100%;}
+.setup-step{display:flex;gap:12px;text-align:left;margin-bottom:14px;font-size:13px;line-height:1.6;}
+.step-num{background:#1e40af;color:#fff;border-radius:50%;width:24px;height:24px;min-width:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-top:1px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.month-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;}
+.m-tab{padding:5px 13px;border:1px solid #e2e8f0;border-radius:20px;cursor:pointer;font-size:12px;background:#fff;color:#64748b;font-family:inherit;}
+.m-tab.on{background:#1e40af;color:#fff;border-color:#1e40af;}
+.prog-bar{display:flex;align-items:center;gap:6px;}
+.prog-bg{flex:1;height:4px;background:#e2e8f0;border-radius:2px;}
+.prog-fill{height:100%;border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#64748b;font-size:14px;">로딩 중...</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+<script>
+// ╔══════════════════════════════════════════════════════╗
+// ║  ★★★  Firebase 설정  ★★★                          ║
+// ║  Firebase Console → 프로젝트 설정 → 내 앱           ║
+// ║  아래 빈칸에 본인 프로젝트 설정값을 붙여넣으세요     ║
+// ╚══════════════════════════════════════════════════════╝
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBpvilKI1QaAKrcXac6SpQCGVRM5JbEbQo",
+  authDomain: "kmje-order-status.firebaseapp.com",
+  projectId: "kmje-order-status",
+  storageBucket: "kmje-order-status.firebasestorage.app",
+  messagingSenderId: "811826287812",
+  appId: "1:811826287812:web:aba2bd37abd0420fcb6591"
+};
+// ════════════════════════════════════════════════════════
+
+const FB_OK = FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId;
+let db = null;
+if (FB_OK) {
+  try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); }
+  catch(e) { console.error('Firebase 초기화 실패', e); }
+}
+
+async function dbGet(k) {
+  if (db) { try { const d = await db.collection('kmje').doc(k).get(); return d.exists ? JSON.parse(d.data().v) : null; } catch { return null; } }
+  try { const v = localStorage.getItem('kmje_' + k); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+async function dbSet(k, val) {
+  if (db) { try { await db.collection('kmje').doc(k).set({v: JSON.stringify(val)}); } catch(e){console.error(e);} }
+  else { localStorage.setItem('kmje_' + k, JSON.stringify(val)); }
+}
+function dbListen(k, cb) {
+  if (db) return db.collection('kmje').doc(k).onSnapshot(d => { if(d.exists) cb(JSON.parse(d.data().v)); });
+  return null;
+}
+
+const {useState,useEffect,useRef,Fragment} = React;
+const uid = () => Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);
+const fmt = n => Number(n||0).toLocaleString('ko-KR');
+const abbr = n => { n=Number(n||0); if(!n)return'0'; if(n>=1e8)return(n/1e8).toFixed(1)+'억'; if(n>=1e7)return Math.round(n/1e7)+'천만'; if(n>=1e4)return Math.round(n/1e4)+'만'; return fmt(n); };
+const fmtCur = (n,cur) => cur==='USD' ? '$'+Number(n||0).toLocaleString('en-US') : fmt(n)+'원';
+// 콤마 포맷 입력 컴포넌트
+function FmtInput({value,onChange,style,placeholder,step}){
+  const[focused,setFocused]=React.useState(false);
+  const E=React.createElement;
+  const display=focused?String(value||''):value?Number(value).toLocaleString('ko-KR'):'';
+  return E('input',{
+    type:focused?'number':'text',
+    value:display,
+    placeholder:placeholder||'',
+    step:step||'1',
+    style:{...style,textAlign:'right'},
+    onFocus:e=>{setFocused(true);setTimeout(()=>e.target.select(),0);},
+    onBlur:()=>setFocused(false),
+    onChange:e=>onChange(e.target.value===''?0:Number(e.target.value))
+  });
+}
+const abbrCur = (n,cur) => cur==='USD' ? '$'+Number(n||0).toLocaleString('en-US') : abbr(n)+'원';
+const ym = s => s?.slice(0,7)??null;
+const today = new Date().toISOString().slice(0,10);
+const thisM = new Date().toISOString().slice(0,7);
+const prevM = (()=>{const d=new Date();d.setMonth(d.getMonth()-1);return d.toISOString().slice(0,7);})();
+const todayStr = new Date().toISOString().slice(0,10);
+const PAY_TYPES = ["계약금","1차기성","2차기성","3차기성","4차기성","5차기성","잔금"];
+const INIT_MANAGERS = ["김경래","이충영","조용집","박명호","고석근","이일섭"];
+const mkP = (type,amount,inv=false,invD=null,recD=null) => ({id:uid(),type,amount:amount||0,invoiceIssued:!!inv,invoiceDate:invD,receivedDate:recD,paidDate:null});
+const oBalance = o => (o.projectAmount||0) - o.payments.filter(p=>p.receivedDate).reduce((s,p)=>s+(p.amount||0),0);
+const sUnpaid = s => (s.contractAmount||0) - s.payments.filter(p=>p.paidDate).reduce((s2,p)=>s2+(p.amount||0),0);
+
+const INIT = [
+  {id:"o01",no:1,orderNo:"2617-001",orderType:"구두발주",clientName:"에스케이케미칼",description:"S.P.D 250A LEAK Valve 구매, 납품 외",manager:"김경래",startDate:"2026-01-12",endDate:"2026-01-13",projectAmount:2000000,note:"",payments:[mkP("잔금",2000000)],subcontractors:[]},
+  {id:"o02",no:2,orderNo:"2602-002",orderType:"발주서",clientName:"삼양엔씨켐",description:"박막증류기 GLASS PORT O-RING 구매, 납품",manager:"김경래",startDate:"2026-01-13",endDate:"2026-01-15",projectAmount:0,note:"220,000",payments:[],subcontractors:[]},
+  {id:"o03",no:3,orderNo:"2601-003",orderType:"구두발주",clientName:"켐트로스 안산공장",description:"융합)4-2공장 드럼 믹스기(6대) 제작 설치",manager:"이충영",startDate:"2026-01-13",endDate:"2026-03-13",projectAmount:141000000,note:"견적가 141,000,000",payments:[mkP("계약금",42300000,true,null,"2026-02-10"),mkP("1차기성",84600000,true,null,null),mkP("잔금",14100000,true,null,null)],subcontractors:[{id:"s031",name:"다아이엔티",contractAmount:83000000,startDate:"2026-01-19",endDate:"2026-03-13",note:"견적가 87,000,000",payments:[mkP("계약금",8300000,true,null,"2026-01-29"),mkP("1차기성",24900000,true,null,"2026-02-09"),mkP("2차기성",33200000),mkP("잔금",16600000)]},{id:"s032",name:"벧엘전기",contractAmount:42000000,startDate:"2026-01-19",endDate:"2026-03-13",note:"견적가 45,720,000",payments:[mkP("계약금",4200000,true,null,"2026-02-27"),mkP("잔금",37800000)]}]},
+  {id:"o04",no:4,orderNo:"2643-004",orderType:"구두발주",clientName:"그린케미칼",description:"SPD 125A 개선작업",manager:"김경래",startDate:"2026-01-08",endDate:"2026-02-01",projectAmount:2900000,note:"연구개발 추후발행",payments:[mkP("잔금",2900000)],subcontractors:[]},
+  {id:"o05",no:5,orderNo:"2655-005",orderType:"구두발주",clientName:"엠에스팜",description:"R-211 반응기 임펠러 개선 및 밸브 수리",manager:"조용집",startDate:"2026-01-12",endDate:"2026-01-27",projectAmount:1850000,note:"",payments:[mkP("잔금",1850000,true,null,"2026-02-27")],subcontractors:[]},
+  {id:"o06",no:6,orderNo:"2654-006",orderType:"실행가",clientName:"동성케미칼",description:"S.P.D 0.94m² 임대 사용",manager:"고석근",startDate:"2026-01-20",endDate:"2026-01-23",projectAmount:9511000,note:"",payments:[mkP("잔금",9511000,true,null,"2026-02-27")],subcontractors:[]},
+  {id:"o07",no:7,orderNo:"2661-007",orderType:"실행가",clientName:"희성촉매",description:"TFE 500A FOOT BEARING & SHAFT 교체",manager:"김경래",startDate:"2026-01-26",endDate:"2026-02-09",projectAmount:4900000,note:"",payments:[mkP("잔금",4900000,true,null,"2026-03-31")],subcontractors:[]},
+  {id:"o08",no:8,orderNo:"2602-008",orderType:"발주서",clientName:"삼양엔씨켐 정안공장",description:"박막증류기 GLASS PORT O-RING (3 SET)",manager:"김경래",startDate:"2026-01-15",endDate:"2026-01-23",projectAmount:222000,note:"",payments:[mkP("잔금",222000,true,null,"2026-02-27")],subcontractors:[]},
+  {id:"o09",no:9,orderNo:"2673-009",orderType:"계약서 작성",clientName:"저장모리타신소재",description:"중국 저장모리타 공장 장비 제작 수출",manager:"박명호",startDate:"2026-01-20",endDate:"2026-08-20",projectAmount:3796100,currency:"USD",note:"외화 계약(USD)",payments:[mkP("계약금",1518440),mkP("1차기성",1898050),mkP("잔금",379610)],subcontractors:[{id:"s091",name:"한강엔지니어링",contractAmount:580000000,startDate:"2026-02-27",endDate:"2026-07-31",note:"",payments:[mkP("계약금",232000000,true,null,"2026-03-05"),mkP("1차기성",290000000),mkP("잔금",58000000)]},{id:"s092",name:"세원이앤씨",contractAmount:510000000,startDate:"2026-02-27",endDate:"2026-07-31",note:"",payments:[mkP("계약금",204000000,true,null,"2026-03-05"),mkP("1차기성",255000000),mkP("잔금",51000000)]},{id:"s093",name:"카본가람",contractAmount:399000000,startDate:"2026-02-27",endDate:"2026-08-20",note:"",payments:[mkP("계약금",159600000,true,null,"2026-03-05"),mkP("1차기성",199500000),mkP("잔금",39900000)]},{id:"s094",name:"오토마",contractAmount:48000000,startDate:"2026-03-17",endDate:"2026-05-29",note:"",payments:[mkP("계약금",14400000,true,null,"2026-03-17"),mkP("잔금",33600000)]},{id:"s095",name:"태양펌프",contractAmount:40000000,startDate:"2026-03-17",endDate:"2026-06-08",note:"",payments:[mkP("계약금",12000000,true,null,"2026-03-11"),mkP("잔금",28000000)]},{id:"s096",name:"디브이텍베큠",contractAmount:140000000,startDate:"2026-05-13",endDate:"2026-07-31",note:"",payments:[mkP("계약금",56000000,true,null,"2026-04-27"),mkP("1차기성",70000000),mkP("잔금",14000000)]},{id:"s097",name:"벧엘전기",contractAmount:13000000,startDate:null,endDate:null,note:"",payments:[mkP("계약금",3900000),mkP("1차기성",7800000),mkP("잔금",1300000)]},{id:"s098",name:"스크류일번지산업",contractAmount:22500000,startDate:"2026-05-13",endDate:"2026-07-31",note:"",payments:[mkP("계약금",9000000),mkP("1차기성",11250000),mkP("잔금",2250000)]}]},
+  {id:"o10",no:10,orderNo:"2611-010",orderType:"실행가",clientName:"에이치에스바이오",description:"스텐타공망",manager:"박명호",startDate:"2026-02-02",endDate:"2026-02-19",projectAmount:420000,note:"",payments:[mkP("잔금",420000,true,null,"2026-03-31")],subcontractors:[]},
+  {id:"o11",no:11,orderNo:"2611-011",orderType:"실행가",clientName:"에이치에스바이오",description:"교반기 모터 수리(PTA3012)",manager:"박명호",startDate:"2026-02-03",endDate:"2026-02-19",projectAmount:4500000,note:"",payments:[mkP("잔금",4500000,true,null,"2026-03-31")],subcontractors:[]},
+  {id:"o12",no:12,orderNo:"2611-012",orderType:"실행가",clientName:"에이치에스바이오",description:"반응기 메카니칼 씰 수리(MEA3001)",manager:"박명호",startDate:"2026-02-04",endDate:"2026-02-19",projectAmount:14000000,note:"",payments:[mkP("잔금",14000000,true,null,"2026-03-31")],subcontractors:[]},
+  {id:"o13",no:13,orderNo:"2605-013",orderType:"실행가",clientName:"신성소재",description:"하스텔로이 반응기 샤프트 수리",manager:"박명호",startDate:"2026-02-05",endDate:"2026-02-11",projectAmount:3500000,note:"",payments:[mkP("잔금",3500000,true,null,"2026-02-19")],subcontractors:[]},
+  {id:"o14",no:14,orderNo:"2655-014",orderType:"계약서 작성",clientName:"켐리치(엠에스팜)",description:"중고 반응기 12,000Li 2Sets 및 컬럼 200A 2ea",manager:"박명호",startDate:"2026-02-09",endDate:"2026-10-31",projectAmount:246000000,note:"",payments:[mkP("계약금",46000000,true,null,"2026-02-10"),mkP("1차기성",100000000),mkP("잔금",100000000)],subcontractors:[]},
+  {id:"o15",no:15,orderNo:"2670-015",orderType:"구두발주",clientName:"와이씨아이어드밴스드",description:"생산동 TRAY VACUUM DRYER 열판 세척 및 점검구 설치",manager:"김경래",startDate:"2026-02-09",endDate:"2026-02-27",projectAmount:5900000,note:"",payments:[mkP("잔금",5900000,true,null,"2026-04-30")],subcontractors:[]},
+  {id:"o16",no:16,orderNo:"2669-016",orderType:"실행가",clientName:"글루가",description:"S.P.D 0.94m² 임대 사용",manager:"고석근",startDate:"2026-02-23",endDate:"2026-02-23",projectAmount:6315000,note:"",payments:[mkP("잔금",6315000,true,null,"2026-03-31")],subcontractors:[]},
+  {id:"o17",no:17,orderNo:"2675-017",orderType:"발주서",clientName:"미원상사(반월공장)",description:"STS304 Nutsche Filter 2Sets",manager:"조용집",startDate:"2026-02-24",endDate:"2026-04-23",projectAmount:18600000,note:"",payments:[mkP("잔금",18600000,true,null,"2026-04-30")],subcontractors:[]},
+  {id:"o18",no:18,orderNo:"2605-018",orderType:"실행가",clientName:"신성소재",description:"Resin Tower 1300L Dished Head 제작",manager:"박명호",startDate:"2026-03-13",endDate:"2026-05-12",projectAmount:35000000,note:"견적가 36,000,000",payments:[mkP("계약금",10500000,true,null,"2026-03-21"),mkP("잔금",24500000)],subcontractors:[]},
+  {id:"o19",no:19,orderNo:"2601-019",orderType:"구두발주",clientName:"켐트로스 원료공장",description:"쿠션탱크 100L 제작 납품",manager:"박명호",startDate:"2026-03-05",endDate:"2026-04-27",projectAmount:7500000,note:"",payments:[mkP("잔금",7500000,true,null,null)],subcontractors:[]},
+  {id:"o20",no:20,orderNo:"2605-020",orderType:"실행가",clientName:"신성소재",description:"STS304 쿠션탱크 200L 개조",manager:"박명호",startDate:"2026-03-06",endDate:"2026-03-17",projectAmount:3500000,note:"",payments:[mkP("잔금",3500000,true,null,"2026-04-02")],subcontractors:[]},
+  {id:"o21",no:21,orderNo:"2605-021",orderType:"구두발주",clientName:"신성소재",description:"밸브용 오링",manager:"박명호",startDate:"2026-03-16",endDate:"2026-03-17",projectAmount:222000,note:"",payments:[mkP("잔금",222000,true,null,"2026-04-09")],subcontractors:[]},
+  {id:"o22",no:22,orderNo:"2617-022",orderType:"실행가",clientName:"에스케이케미칼",description:"S.P.D 0.1m² 임대 사용",manager:"고석근",startDate:"2026-03-16",endDate:"2026-03-16",projectAmount:2985000,note:"",payments:[mkP("잔금",2985000,true,null,"2026-04-07")],subcontractors:[]},
+  {id:"o23",no:23,orderNo:"2602-023",orderType:"발주서",clientName:"삼양엔씨켐 탄천1공장",description:"누체필터 테프론 캡슐오링",manager:"박명호",startDate:"2026-02-09",endDate:"2026-03-17",projectAmount:1600000,note:"",payments:[mkP("잔금",1600000,true,null,"2026-04-30")],subcontractors:[]},
+  {id:"o24",no:24,orderNo:"2643-024",orderType:"실행가",clientName:"그린케미칼",description:"S.P.D 0.94m² 임대 사용",manager:"고석근",startDate:"2026-03-17",endDate:"2026-03-18",projectAmount:6750000,note:"",payments:[mkP("잔금",6750000,true,null,"2026-04-30")],subcontractors:[]},
+  {id:"o25",no:25,orderNo:"2606-025",orderType:"구두발주",clientName:"신성켐오일",description:"교반기 모터감속기 납품",manager:"박명호",startDate:"2026-03-18",endDate:"2026-03-19",projectAmount:1500000,note:"",payments:[mkP("잔금",1500000,true,null,"2026-05-07")],subcontractors:[]},
+  {id:"o26",no:26,orderNo:"2676-026",orderType:"실행가",clientName:"타코마테크놀로지",description:"S.P.D 0.1m² 임대 사용",manager:"고석근",startDate:"2026-03-25",endDate:"2026-03-25",projectAmount:3620000,note:"",payments:[mkP("잔금",3620000,true,null,null)],subcontractors:[]},
+  {id:"o27",no:27,orderNo:"2658-027",orderType:"구두발주",clientName:"케이에쓰화학",description:"Short Path Distillator 1.7m² 부동액",manager:"김경래",startDate:"2026-04-01",endDate:"2026-04-01",projectAmount:3049000,note:"",payments:[mkP("잔금",3049000,true,null,null)],subcontractors:[]},
+  {id:"o28",no:28,orderNo:"2601-028",orderType:"실행가",clientName:"켐트로스 원료공장",description:"쿠션탱크 노즐 수리",manager:"박명호",startDate:"2026-04-08",endDate:"2026-04-08",projectAmount:1000000,note:"",payments:[mkP("잔금",1000000,true,null,null)],subcontractors:[]},
+  {id:"o29",no:29,orderNo:"2655-029",orderType:"구두발주",clientName:"엠에스팜",description:"R-217 반응기 임펠러 제작 및 개선",manager:"조용집",startDate:"2026-04-09",endDate:null,projectAmount:6800000,note:"",payments:[mkP("잔금",6800000)],subcontractors:[]},
+  {id:"o30",no:30,orderNo:"2669-030",orderType:"실행가",clientName:"글루가",description:"S.P.D 0.94m² 임대 사용",manager:"고석근",startDate:"2026-04-13",endDate:"2026-04-14",projectAmount:7815000,note:"",payments:[mkP("잔금",7815000,true,null,null)],subcontractors:[]},
+  {id:"o31",no:31,orderNo:"2602-031",orderType:"발주서",clientName:"삼양엔씨켐",description:"TRAY VACUUM DRYER VACUUM SENSOR",manager:"김경래",startDate:"2026-04-14",endDate:"2026-04-27",projectAmount:400000,note:"",payments:[],subcontractors:[]},
+  {id:"o32",no:32,orderNo:"2602-032",orderType:"발주서",clientName:"삼양엔씨켐",description:"SPD 350A VACUUM SENSOR",manager:"김경래",startDate:"2026-04-14",endDate:"2026-07-07",projectAmount:960000,note:"",payments:[],subcontractors:[]},
+  {id:"o33",no:33,orderNo:"2645-033",orderType:"구두발주",clientName:"덕산테코피아 공주사업장",description:"CHECK VALVE PERFLUORO O-RING",manager:"김경래",startDate:"2026-04-17",endDate:"2026-05-16",projectAmount:350000,note:"",payments:[mkP("잔금",350000,true,null,null)],subcontractors:[]},
+  {id:"o34",no:34,orderNo:"2601-034",orderType:"구두발주",clientName:"켐트로스 원료공장",description:"모터감속기 철거설치",manager:"박명호",startDate:"2026-04-27",endDate:"2026-05-04",projectAmount:1500000,note:"",payments:[mkP("잔금",1500000,true,null,null)],subcontractors:[]},
+  {id:"o35",no:35,orderNo:"2601-035",orderType:"구두발주",clientName:"켐트로스 진천공장",description:"S.P.D 드레인포트 강화유리 교체",manager:"박명호",startDate:"2026-05-07",endDate:null,projectAmount:1590000,note:"",payments:[],subcontractors:[]},
+  {id:"o36",no:36,orderNo:"2614-036",orderType:"계약서 작성",clientName:"가나C&P",description:"STS316L Reactor 5m³ 외 장비 제작",manager:"이일섭",startDate:"2026-05-07",endDate:"2026-10-05",projectAmount:720000000,note:"",payments:[mkP("계약금",216000000,true,null,null),mkP("1차기성",216000000),mkP("2차기성",216000000),mkP("잔금",72000000)],subcontractors:[]},
+  {id:"o37",no:37,orderNo:"2617-037",orderType:"구두발주",clientName:"에스케이케미칼",description:"S.P.D 250A LEVEL PORT 제작 납품",manager:"김경래",startDate:"2026-05-11",endDate:"2026-05-29",projectAmount:5900000,note:"",payments:[],subcontractors:[]},
+  {id:"o38",no:38,orderNo:"2601-038",orderType:"구두발주",clientName:"켐트로스 안산공장",description:"S.P.D 125A OIL ROTARY PUMP MIST FILTER",manager:"김경래",startDate:"2026-05-11",endDate:"2026-05-15",projectAmount:250000,note:"",payments:[],subcontractors:[]},
+  {id:"o39",no:39,orderNo:"2601-039",orderType:"구두발주",clientName:"켐트로스 진천공장",description:"반응기 맨홀 오링 납품",manager:"박명호",startDate:"2026-05-08",endDate:"2026-05-08",projectAmount:0,note:"120,000",payments:[],subcontractors:[]},
+  {id:"o40",no:40,orderNo:"2601-040",orderType:"구두발주",clientName:"켐트로스 진천공장",description:"리시버 탱크 레벨그라스 A/S",manager:"박명호",startDate:"2026-05-12",endDate:"2026-05-12",projectAmount:0,note:"750,000",payments:[],subcontractors:[]},
+  {id:"o41",no:41,orderNo:"2601-041",orderType:"구두발주",clientName:"켐트로스 원료공장",description:"여과기 양볼트 제작 납품",manager:"박명호",startDate:"2026-05-08",endDate:"2026-05-15",projectAmount:2100000,note:"",payments:[mkP("잔금",2100000,true,null,null)],subcontractors:[]}
+];
+
+
+const CD=[["00","자재"],["01","켐트로스"],["02","삼양엔씨켐"],["03","켐텍스코리아"],["04","케이에스광학"],["05","신성소재"],["06","신성켐오일"],["07","동인화학(송탄공장)"],["08","동인화학(부여공장)"],["09","에스피씨"],["10","한서켐"],["11","에이치에스바이오"],["12","P&H Tech"],["13","오메가테크놀로지"],["14","가나C&P"],["15","엔지켐"],["16","국방과학연구소"],["17","SK케미칼"],["18","동국생명과학"],["19","동양피앤이"],["20","한국바이오젠"],["21","에스에스팜"],["22","성신냉열"],["23","협회"],["24","케이엠제이"],["25","동면사무소"],["26","플로우텍"],["27","씨티케미칼"],["28","KS랩"],["29","주일산업"],["30","트리엔"],["31","송원산업"],["32","자경케미칼"],["33","위너켐"],["34","스노젠"],["35","와우에프엔비"],["36","케미랜드"],["37","케미폴리오"],["38","신아티엔씨"],["39","이에스"],["40","벨이앤씨"],["41","현성테크노"],["42","동양케미칼"],["43","그린케미칼"],["44","알케미스트"],["45","덕산테코피아"],["46","제일PLATEX산업"],["47","쎄타텍"],["48","한화솔루션"],["49","이앤에프"],["50","이피켐텍"],["51","포리바이오"],["52","케이씨씨실리콘"],["53","엘에스켐"],["54","동성케미칼"],["55","엠에스팜"],["56","LXMMA"],["57","디엔에스"],["58","케이에쓰화학"],["59","제이제이다산"],["60","이녹스에코엠"],["61","희성촉매"],["62","앤아이씨"],["63","대지건설"],["64","켐트로닉스"],["65","덕산네오룩스"],["66","TFC"],["67","이엔에프테크놀로지"],["68","이니스트에스티"],["69","글루가"],["70","YCIA"],["71","피에스케미칼"],["72","뉴타입이엔씨"],["73","저장모리타신소재"],["74","JHC"],["75","미원상사"],["76","타코마테크놀로지"]];
+const INIT_CLIENTS=CD.map(([code,name])=>({id:uid(),code,name,ceo:"",phone:"",email:"",address:"",note:""}));
+// ── SetupScreen ─────────────────────────────────────────
+function SetupScreen() {
+  return React.createElement('div',{className:'setup-screen'},
+    React.createElement('div',{className:'setup-box'},
+      React.createElement('div',{style:{fontSize:28,marginBottom:8}},'🏭'),
+      React.createElement('h2',{style:{fontSize:18,fontWeight:700,marginBottom:4}},'㈜케이엠제이 수주관리'),
+      React.createElement('p',{style:{fontSize:12,color:'#64748b',marginBottom:24}},'Firebase 설정 후 팀 전체가 실시간으로 사용할 수 있습니다'),
+      React.createElement('div',{style:{background:'#f8fafc',borderRadius:8,padding:16,textAlign:'left',marginBottom:20}},
+        React.createElement('div',{style:{fontSize:12,fontWeight:700,marginBottom:12,color:'#374151'}},'⚙️ 설정 방법 (5분 소요)'),
+        ...[
+          ['firebase.google.com 접속 → Google 계정으로 로그인 → "프로젝트 만들기"'],
+          ['프로젝트 생성 후 → Firestore Database → "데이터베이스 만들기" → 테스트 모드 선택'],
+          ['프로젝트 설정(⚙️) → "내 앱" → 웹 앱 추가(</>) → firebaseConfig 복사'],
+          ['이 HTML 파일을 메모장으로 열고 상단 FIREBASE_CONFIG 부분에 붙여넣기 → 저장'],
+          ['파일을 다시 열거나, Netlify Drop(netlify.com/drop)에 파일을 올리면 완료']
+        ].map(([txt],i)=>React.createElement('div',{key:i,className:'setup-step'},
+          React.createElement('div',{className:'step-num'},i+1),
+          React.createElement('div',null,txt)
+        ))
+      ),
+      React.createElement('div',{style:{background:'#fef9c3',borderRadius:8,padding:12,fontSize:11,color:'#854d0e',textAlign:'left'}},
+        '💡 Firebase 무료 플랜(Spark)으로도 충분합니다. 비용이 발생하지 않습니다.')
+    )
+  );
+}
+
+// ── Dashboard ────────────────────────────────────────────
+function Dashboard({orders}){
+  const krwOrders=orders.filter(o=>o.currency!=='USD');
+  const usdOrders=orders.filter(o=>o.currency==='USD');
+  const totKRW=krwOrders.reduce((s,o)=>s+(o.projectAmount||0),0);
+  const totUSD=usdOrders.reduce((s,o)=>s+(o.projectAmount||0),0);
+  const recKRW=krwOrders.reduce((s,o)=>s+o.payments.filter(p=>p.receivedDate).reduce((s2,p)=>s2+(p.amount||0),0),0);
+  const recUSD=usdOrders.reduce((s,o)=>s+o.payments.filter(p=>p.receivedDate).reduce((s2,p)=>s2+(p.amount||0),0),0);
+  const balKRW=totKRW-recKRW;
+  const balUSD=totUSD-recUSD;
+  const curInc=krwOrders.reduce((s,o)=>s+o.payments.filter(p=>p.invoiceDate&&ym(p.invoiceDate)===prevM&&!p.receivedDate).reduce((s2,p)=>s2+(p.amount||0),0),0);
+  const subTot=orders.reduce((s,o)=>s+o.subcontractors.reduce((s2,sub)=>s2+sUnpaid(sub),0),0);
+  const kpiDual=(lbl,krw,usd,sub,color)=>E('div',{className:'kpi'},
+    E('div',{className:'kpi-lbl'},lbl),
+    E('div',{style:{fontSize:20,fontWeight:700,color,marginBottom:2}},abbr(krw)+'원'),
+    usd>0&&E('div',{style:{fontSize:13,fontWeight:600,color:'#059669',marginBottom:2}},'$'+Number(usd).toLocaleString('en-US')),
+    E('div',{className:'kpi-sub'},sub)
+  );
+  const kpis=[
+    {lbl:'2026년 수주 합계',val:abbr(totKRW)+'원',usd:totUSD,sub:orders.filter(o=>o.projectAmount>0).length+'건',color:'#1e40af'},
+    {lbl:'총 미수금',val:abbr(balKRW)+'원',usd:balUSD,sub:'입금 대기',color:'#d97706'},
+    {lbl:'당월 예상 수입',val:abbr(curInc)+'원',usd:0,sub:'전월 발행 계산서 기준',color:'#059669'},
+    {lbl:'협력업체 미지급',val:abbr(subTot)+'원',usd:0,sub:'지급 예정 합계',color:'#dc2626'},
+  ];
+  const top=[...orders].filter(o=>oBalance(o)>0).sort((a,b)=>oBalance(b)-oBalance(a)).slice(0,10);
+  const E=React.createElement;
+  return E('div',null,
+    E('div',{className:'kpis'},
+      ...kpis.map((k,i)=>E('div',{key:i,className:'kpi'},
+        E('div',{className:'kpi-lbl'},k.lbl),
+        E('div',{className:'kpi-val',style:{color:k.color}},k.val),
+        k.usd>0&&E('div',{style:{fontSize:13,fontWeight:600,color:'#059669',marginBottom:2}},'$'+Number(k.usd).toLocaleString('en-US')),
+        E('div',{className:'kpi-sub'},k.sub)
+      ))
+    ),
+    E('div',{className:'card'},
+      E('div',{className:'card-hdr'},E('span',null,'미수금 현황'),E('span',{style:{fontSize:11,color:'#94a3b8',fontWeight:400,marginLeft:6}},'(미수금 상위 10건)')),
+      E('div',{style:{overflowX:'auto'}},
+        E('table',null,
+          E('thead',null,E('tr',null,...['수주번호','거래처','수행내용','담당','완료예정','수주금액','미수금','상태','계산서','진행률'].map(h=>E('th',{key:h,style:['수주금액','미수금'].includes(h)?{textAlign:'right'}:['상태','계산서','진행률'].includes(h)?{textAlign:'center'}:{}},h)))),
+          E('tbody',null,...top.map(o=>{
+            const b=oBalance(o);const pct=o.projectAmount?Math.round(((o.projectAmount-b)/o.projectAmount)*100):0;
+            return E('tr',{key:o.id},
+              E('td',{className:'mono',style:{fontSize:11}},o.orderNo),
+              E('td',{style:{fontWeight:500}},o.clientName),
+              E('td',{style:{color:'#64748b',maxWidth:170,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},o.description),
+              E('td',null,E('span',{className:'badge b-gray'},o.manager)),
+              E('td',{style:{fontSize:11,color:'#64748b'}},o.endDate||'진행중'),
+              E('td',{className:'mono',style:{textAlign:'right',color:o.currency==='USD'?'#059669':'inherit'}},fmtCur(o.projectAmount,o.currency)),
+              E('td',{className:'mono',style:{textAlign:'right',color:'#d97706',fontWeight:600}},fmtCur(b,o.currency)),
+              E('td',{style:{textAlign:'center'}},(()=>{if(!o.projectAmount)return E('span',{className:'badge b-gray'},'금액미정');if(b<=0)return E('span',{className:'badge b-green'},'완료');if(o.payments&&o.payments.some(p=>p.receivedDate))return E('span',{className:'badge b-blue'},'진행중');return E('span',{className:'badge b-amber'},'미수');})()),
+              E('td',{style:{textAlign:'center'}},(()=>{const tot=o.payments?o.payments.length:0;const iss=o.payments?o.payments.filter(p=>p.invoiceDate).length:0;if(tot===0)return E('span',{style:{color:'#94a3b8',fontSize:11}},'—');const lbl=iss===0?'미발행':iss===tot?'전체발행':iss+'/'+tot;const cls=iss===0?'b-gray':iss===tot?'b-green':'b-amber';return E('span',{className:'badge '+cls,style:{fontSize:10}},lbl);})()),
+              E('td',null,E('div',{className:'prog-bar'},
+                E('div',{className:'prog-bg'},E('div',{className:'prog-fill',style:{width:pct+'%',background:pct>=100?'#059669':'#1e40af'}})),
+                E('span',{style:{fontSize:10,color:'#64748b',minWidth:26,textAlign:'right'}},pct+'%')
+              ))
+            );
+          }))
+        )
+      )
+    )
+  );
+}
+
+// ── ExpandedDetail ───────────────────────────────────────
+function ExpandedDetail({order,onUpdate}){
+  const E=React.createElement;
+  const GISENG=['1차기성','2차기성','3차기성','4차기성','5차기성'];
+  const setP=(i,f,v)=>{const p=order.payments.map((x,j)=>j===i?{...x,[f]:v}:x);onUpdate({...order,payments:p});};
+  const setSP=(sid,pi,f,v)=>{const s=order.subcontractors.map(s=>s.id!==sid?s:{...s,payments:s.payments.map((x,j)=>j===pi?{...x,[f]:v}:x)});onUpdate({...order,subcontractors:s});};
+  const delP=id=>{onUpdate({...order,payments:order.payments.filter(p=>p.id!==id)});};
+  const addGiseng=()=>{
+    const existing=order.payments.filter(p=>GISENG.includes(p.type)).map(p=>p.type);
+    const next=GISENG.find(g=>!existing.includes(g));
+    if(!next){alert('더 이상 기성을 추가할 수 없습니다 (최대 5차)');return;}
+    const idx=order.payments.findIndex(p=>p.type==='잔금');
+    const newP=mkP(next,0);
+    const payments=idx>=0?[...order.payments.slice(0,idx),newP,...order.payments.slice(idx)]:[...order.payments,newP];
+    onUpdate({...order,payments});
+  };
+  const pSt=p=>{if(p.receivedDate)return['입금완료','b-green'];if(p.invoiceDate)return['발행완료','b-blue'];return['미발행','b-gray'];};
+  const sSt=p=>{if(p.paidDate)return['지급완료','b-green'];if(p.invoiceDate)return['계산서수취','b-blue'];return['미수취','b-gray'];};
+  const iS={background:'#fff',border:'1px solid #e2e8f0',borderRadius:5,padding:'4px 7px',color:'#1e293b',fontSize:11,fontFamily:'inherit',outline:'none'};
+  return E('div',{className:'exp-area'},
+    E('div',{style:{fontSize:11,color:'#64748b',marginBottom:10}},'💡 세금계산서 발행일 입력 시 현금흐름 탭에 자동 반영됩니다'),
+    order.payments.length>0&&E('div',{style:{marginBottom:8}},
+      E('div',{className:'sec-lbl'},'수금 현황 (발주처)'),
+      E('table',null,
+        E('thead',null,E('tr',null,...['구분','결제조건','금액','비율','세금계산서 발행일','입금일','상태',''].map(h=>E('th',{key:h,style:['금액'].includes(h)?{textAlign:'right'}:['비율'].includes(h)?{textAlign:'center',color:'#94a3b8'}:h==='결제조건'?{color:'#94a3b8',maxWidth:120}:{}},h)))),
+        E('tbody',null,...order.payments.map((p,i)=>{const[sl,sc]=pSt(p);return E('tr',{key:p.id},
+          E('td',{style:{fontWeight:500,color:'#1e40af'}},p.type),
+          E('td',{style:{fontSize:11,color:'#64748b',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.condition||'—'),
+          E('td',{className:'mono',style:{textAlign:'right'}},fmt(p.amount)),
+          E('td',{style:{textAlign:'center',fontSize:11,color:'#64748b'}},
+            order.projectAmount>0&&p.amount>0
+              ?(Math.round(p.amount/order.projectAmount*1000)/10).toFixed(1)+'%'
+              :'—'
+          ),
+          E('td',null,E('input',{type:'date',value:p.invoiceDate||'',onChange:e=>setP(i,'invoiceDate',e.target.value||null),style:{...iS,width:130}})),
+          E('td',null,E('input',{type:'date',value:p.receivedDate||'',onChange:e=>setP(i,'receivedDate',e.target.value||null),style:{...iS,width:130}})),
+          E('td',null,E('span',{className:`badge ${sc}`},sl)),
+          E('td',{style:{width:40}},E('button',{className:'btn sm dng',style:{padding:'2px 6px'},onClick:()=>delP(p.id)},'✕'))
+        );}))
+      )
+    ),
+    order.payments.length>0&&E('button',{className:'btn sm',style:{margin:'6px 0 12px'},onClick:addGiseng},'+ 기성 추가'),
+    ...order.subcontractors.map(sub=>E('div',{key:sub.id,className:'sub-block',style:{marginBottom:10}},
+      E('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}},
+        E('div',null,
+          E('span',{style:{fontSize:12,fontWeight:600,color:'#f97316'}},sub.name),
+          E('span',{style:{fontSize:11,color:'#64748b',marginLeft:10}},`계약: ${fmt(sub.contractAmount)} | 미지급: ${fmt(sUnpaid(sub))}`)
+        )
+      ),
+      E('table',null,
+        E('thead',null,E('tr',null,...['구분','결제조건','금액','비율','계산서 수취일','지급일','상태'].map(h=>E('th',{key:h,style:['금액'].includes(h)?{textAlign:'right'}:['비율'].includes(h)?{textAlign:'center',color:'#94a3b8'}:h==='결제조건'?{color:'#94a3b8'}:{}},h)))),
+        E('tbody',null,...sub.payments.map((p,pi)=>{const[sl,sc]=sSt(p);return E('tr',{key:p.id},
+          E('td',null,p.type),
+          E('td',{style:{fontSize:11,color:'#64748b',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.condition||'—'),
+          E('td',{className:'mono',style:{textAlign:'right'}},fmt(p.amount)),
+          E('td',{style:{textAlign:'center',fontSize:11,color:'#64748b'}},
+            sub.contractAmount>0&&p.amount>0
+              ?(Math.round(p.amount/sub.contractAmount*1000)/10).toFixed(1)+'%'
+              :'—'
+          ),
+          E('td',null,E('input',{type:'date',value:p.invoiceDate||'',onChange:e=>setSP(sub.id,pi,'invoiceDate',e.target.value||null),style:{...iS,width:130}})),
+          E('td',null,E('input',{type:'date',value:p.paidDate||'',onChange:e=>setSP(sub.id,pi,'paidDate',e.target.value||null),style:{...iS,width:130}})),
+          E('td',null,E('span',{className:`badge ${sc}`},sl))
+        );}))
+      )
+    ))
+  );
+}
+
+// ── OrderModal ───────────────────────────────────────────
+function OrderModal({order,onSave,onClose,managers,clients,orders}){
+  const E=React.createElement;
+  const[f,setF]=useState(order?{...order,currency:order.currency||'KRW'}:{id:'',orderNo:'',orderType:'구두발주',clientName:'',description:'',manager:'김경래',startDate:'',endDate:'',projectAmount:0,currency:'KRW',note:'',payments:[mkP("계약금",0),mkP("잔금",0)],subcontractors:[]});
+  const sf=(k,v)=>setF(x=>({...x,[k]:v}));
+  const autoOrderNo=(clientName)=>{
+    const cl=(clients||[]).find(c=>c.name===clientName);
+    if(!cl)return f.orderNo;
+    const yr=new Date().getFullYear().toString().slice(2);
+    const code=cl.code.padStart(2,'0');
+    // 전체 수주의 순번(뒷자리) 중 최댓값 기준으로 다음 순번 결정
+    let maxSeq=0;
+    (orders||[]).forEach(o=>{
+      const no=o.orderNo||'';
+      const parts=no.split('-');
+      if(parts.length===2){const seq=parseInt(parts[1]||'0');if(seq>maxSeq)maxSeq=seq;}
+    });
+    const nextSeq=String(maxSeq+1).padStart(3,'0');
+    return yr+code+'-'+nextSeq;
+  };
+  const onClientChange=(name)=>{
+    const newNo=autoOrderNo(name);
+    setF(x=>({...x,clientName:name,orderNo:newNo}));
+  };
+  const GISENG_LIST=['1차기성','2차기성','3차기성','4차기성','5차기성'];
+  // 항목 추가 (PAY_TYPES 드롭다운으로 자유 선택)
+  const addP=()=>setF(x=>({...x,payments:[...x.payments,mkP('잔금',0)]}));
+  const rmP=id=>setF(x=>({...x,payments:x.payments.filter(p=>p.id!==id)}));
+  // 금액 직접 입력
+  const upPAmt=(id,v)=>setF(x=>({...x,payments:x.payments.map(p=>p.id===id?{...p,amount:Number(v),pct:''}:p)}));
+  // % 입력 → 금액 자동 계산
+  const upPPct=(id,v,proj)=>setF(x=>({...x,payments:x.payments.map(p=>p.id===id?{...p,pct:v,amount:v===''?p.amount:Math.round(proj*(Number(v)/100))}:p)}));
+  const addS=()=>setF(x=>({...x,subcontractors:[...x.subcontractors,{id:uid(),name:'',contractAmount:0,startDate:'',endDate:'',note:'',payments:[mkP("계약금",0),mkP("잔금",0)]}]}));
+  const rmS=sid=>setF(x=>({...x,subcontractors:x.subcontractors.filter(s=>s.id!==sid)}));
+  const upS=(sid,k,v)=>setF(x=>({...x,subcontractors:x.subcontractors.map(s=>s.id===sid?{...s,[k]:v}:s)}));
+  const addSP=sid=>setF(x=>({...x,subcontractors:x.subcontractors.map(s=>s.id!==sid?s:{...s,payments:[...s.payments,mkP("잔금",0)]})}));
+  const rmSP=(sid,pid)=>setF(x=>({...x,subcontractors:x.subcontractors.map(s=>s.id!==sid?s:{...s,payments:s.payments.filter(p=>p.id!==pid)})}));
+  const upSP=(sid,pid,k,v)=>setF(x=>({...x,subcontractors:x.subcontractors.map(s=>s.id!==sid?s:{...s,payments:s.payments.map(p=>p.id!==pid?p:{...p,[k]:v})})}));
+  const iS={background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:6,padding:'6px 9px',color:'#1e293b',fontSize:12,fontFamily:'inherit',outline:'none',width:'100%'};
+  const lbl=t=>E('div',{style:{fontSize:11,color:'#64748b',marginBottom:3}},t);
+  const totalPct=f.payments.reduce((s,p)=>s+(Number(p.pct)||0),0);
+  const totalAmt=f.payments.reduce((s,p)=>s+(p.amount||0),0);
+  return E('div',{className:'modal-bg'},
+    E('div',{className:'modal'},
+      E('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}},
+        E('div',{style:{fontSize:15,fontWeight:700}},order?.id?'수주 수정':'신규 수주 등록'),
+        E('button',{className:'btn sm',onClick:onClose},'✕')
+      ),
+      E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:12}},
+        E('div',null,lbl('수주번호 (자동생성)'),
+          E('input',{style:{...iS,background:f.clientName?'#f0fdf4':'#f8fafc',fontWeight:600,color:'#1e40af'},
+            value:f.orderNo,onChange:e=>sf('orderNo',e.target.value),placeholder:'거래처 선택 시 자동입력'})
+        ),
+        E('div',null,lbl('발주유형'),E('select',{style:iS,value:f.orderType,onChange:e=>sf('orderType',e.target.value)},...['구두발주','발주서','계약서 작성','실행가'].map(t=>E('option',{key:t},t)))),
+        E('div',null,lbl('담당자'),E('select',{style:iS,value:f.manager,onChange:e=>sf('manager',e.target.value)},...(managers||[]).map(m=>E('option',{key:m},m))))
+      ),
+      E('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr',gap:10,marginBottom:10}},
+        E('div',null,lbl('거래처명'),
+          E('select',{style:iS,value:f.clientName,onChange:e=>onClientChange(e.target.value)},
+            E('option',{value:''},'-- 거래처 선택 --'),
+            ...(clients||[]).sort((a,b)=>a.code.localeCompare(b.code)).map(cl=>E('option',{key:cl.id,value:cl.name},'['+cl.code+'] '+cl.name))
+          )
+        ),
+        E('div',null,
+          lbl('프로젝트금액'),
+          E('div',{style:{display:'flex',gap:6}},
+            E('div',{style:{display:'flex',borderRadius:6,overflow:'hidden',border:'1px solid #e2e8f0',flexShrink:0}},
+              E('button',{onClick:()=>sf('currency','KRW'),style:{padding:'5px 10px',border:'none',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:f.currency!=='USD'?700:400,background:f.currency!=='USD'?'#1e40af':'#f8fafc',color:f.currency!=='USD'?'#fff':'#64748b'}},'₩'),
+              E('button',{onClick:()=>sf('currency','USD'),style:{padding:'5px 10px',border:'none',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:f.currency==='USD'?700:400,background:f.currency==='USD'?'#059669':'#f8fafc',color:f.currency==='USD'?'#fff':'#64748b'}},'$')
+            ),
+            E(FmtInput,{value:f.projectAmount||0,onChange:v=>sf('projectAmount',v),style:{...iS,flex:1},placeholder:f.currency==='USD'?'USD 금액':'원화 금액'})
+          )
+        )
+      ),
+      E('div',{style:{marginBottom:10}},lbl('수행내용'),E('input',{style:iS,value:f.description,onChange:e=>sf('description',e.target.value)})),
+      E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:14}},
+        E('div',null,lbl('시작일'),E('input',{type:'date',style:iS,value:f.startDate,onChange:e=>sf('startDate',e.target.value)})),
+        E('div',null,lbl('종료일'),E('input',{type:'date',style:iS,value:f.endDate,onChange:e=>sf('endDate',e.target.value)})),
+        E('div',null,lbl('비고'),E('input',{style:iS,value:f.note,onChange:e=>sf('note',e.target.value)}))
+      ),
+      E('div',{style:{marginBottom:14}},
+        E('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}},
+          E('div',{className:'sec-lbl'},'수금 구조'),
+          E('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+            totalPct>0&&E('span',{style:{fontSize:11,color:totalPct===100?'#059669':'#dc2626',fontWeight:600}},
+              '합계 '+totalPct+'%'+(totalPct===100?' ✓':' (100%가 되어야 합니다)')),
+            E('button',{className:'btn sm',onClick:addP},'+ 기성 추가')
+          )
+        ),
+        E('div',{style:{display:'grid',gridTemplateColumns:'120px 1fr 80px 80px auto',gap:6,marginBottom:4,padding:'0 2px'}},
+          E('div',{style:{fontSize:10,color:'#94a3b8',fontWeight:600}},'구분'),
+          E('div',{style:{fontSize:10,color:'#94a3b8',fontWeight:600}},'결제조건'),
+          E('div',{style:{fontSize:10,color:'#94a3b8',fontWeight:600,textAlign:'right'}},'금액 (원)'),
+          E('div',{style:{fontSize:10,color:'#94a3b8',fontWeight:600,textAlign:'center'}},'비율 (%)'),
+          E('div')
+        ),
+        ...f.payments.map(p=>{
+          return E('div',{key:p.id,style:{display:'grid',gridTemplateColumns:'120px 1fr 80px 80px auto',gap:6,marginBottom:6,alignItems:'center'}},
+            E('select',{style:{...iS,background:'#fff',padding:'5px 8px'},value:p.type,onChange:e=>setF(x=>({...x,payments:x.payments.map(pp=>pp.id===p.id?{...pp,type:e.target.value}:pp)}))},
+              ...PAY_TYPES.map(t=>E('option',{key:t},t))
+            ),
+            E('input',{style:{...iS,background:'#fff'},placeholder:'예) 계약일로부터 14일 이내',value:p.condition||'',onChange:e=>setF(x=>({...x,payments:x.payments.map(pp=>pp.id===p.id?{...pp,condition:e.target.value}:pp)}))}),
+            E(FmtInput,{value:p.amount||0,onChange:v=>upPAmt(p.id,v),style:{...iS,background:'#fff',flex:1},placeholder:'금액 직접 입력'}),
+            E('div',{style:{position:'relative'}},
+              E('input',{type:'number',style:{...iS,background:'#fff',paddingRight:20},placeholder:'%',
+                value:p.pct||'',
+                onChange:e=>upPPct(p.id,e.target.value,f.projectAmount)}),
+              E('span',{style:{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',fontSize:11,color:'#94a3b8'}},'%')
+            ),
+            E('button',{className:'btn sm dng',style:{padding:'4px 8px'},onClick:()=>rmP(p.id)},'✕')
+          );
+        }),
+        f.projectAmount>0&&E('div',{style:{display:'grid',gridTemplateColumns:'120px 1fr 80px 80px auto',gap:6,marginTop:4,paddingTop:8,borderTop:'1px solid #f1f5f9'}},
+          E('div',{style:{fontSize:11,color:'#64748b',fontWeight:600,textAlign:'center'}},'합계'),
+          E('div',{style:{fontSize:12,fontWeight:700,color:totalAmt===f.projectAmount?'#059669':'#d97706',padding:'0 8px'}},
+            fmt(totalAmt)+(totalAmt===f.projectAmount?' = 프로젝트금액 ✓':' / '+fmt(f.projectAmount))),
+          E('div'),E('div')
+        )
+      ),
+      E('div',{style:{marginBottom:20}},
+        E('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+          E('div',{className:'sec-lbl'},'협력업체'),E('button',{className:'btn sm',onClick:addS},'+ 추가')),
+        ...f.subcontractors.map(sub=>E('div',{key:sub.id,style:{background:'#fff7ed',border:'1px solid #fed7aa',borderRadius:8,padding:10,marginBottom:8}},
+          E('div',{style:{display:'flex',gap:6,marginBottom:8}},
+            E('input',{style:{...iS,flex:2,background:'#fff'},placeholder:'협력업체명',value:sub.name,onChange:e=>upS(sub.id,'name',e.target.value)}),
+            E(FmtInput,{value:sub.contractAmount||0,onChange:v=>upS(sub.id,'contractAmount',v),style:{...iS,flex:1,background:'#fff'},placeholder:'계약금액'}),
+            E('button',{className:'btn sm dng',onClick:()=>rmS(sub.id)},'✕')
+          ),
+          ...sub.payments.map(p=>E('div',{key:p.id,style:{display:'grid',gridTemplateColumns:'80px 1fr 1fr 70px auto',gap:5,marginBottom:4,alignItems:'center'}},
+            E('select',{style:{...iS,background:'#fff',padding:'5px 6px'},value:p.type,onChange:e=>upSP(sub.id,p.id,'type',e.target.value)},...PAY_TYPES.map(t=>E('option',{key:t},t))),
+            E('input',{style:{...iS,background:'#fff'},placeholder:'예) 검사 완료 후 14일 이내',value:p.condition||'',onChange:e=>upSP(sub.id,p.id,'condition',e.target.value)}),
+            E(FmtInput,{value:p.amount||0,onChange:v=>upSP(sub.id,p.id,'amount',v),style:{...iS,background:'#fff'},placeholder:'금액'}),
+            E('div',{style:{position:'relative'}},
+              E('input',{type:'number',style:{...iS,background:'#fff',paddingRight:18},placeholder:'%',
+                value:p.pct||'',
+                onChange:e=>{
+                  const pct=e.target.value;
+                  const base=sub.contractAmount||0;
+                  upSP(sub.id,p.id,'pct',pct);
+                  if(pct!==''&&base>0)upSP(sub.id,p.id,'amount',Math.round(base*(Number(pct)/100)));
+                }}),
+              E('span',{style:{position:'absolute',right:5,top:'50%',transform:'translateY(-50%)',fontSize:10,color:'#94a3b8'}},'%')
+            ),
+            E('button',{className:'btn sm dng',onClick:()=>rmSP(sub.id,p.id)},'✕')
+          )),
+          E('button',{className:'btn sm',style:{marginTop:4},onClick:()=>addSP(sub.id)},'+ 기성 추가')
+        ))
+      ),
+      E('div',{style:{display:'flex',justifyContent:'flex-end',gap:8}},
+        E('button',{className:'btn',onClick:onClose},'취소'),
+        E('button',{className:'btn pri',onClick:()=>onSave(f)},'저장')
+      )
+    )
+  );
+}
+
+// ── DeleteModal ──────────────────────────────────────────
+function DeleteModal({message,onConfirm,onClose}){
+  const E=React.createElement;
+  return E('div',{className:'modal-bg',onClick:e=>{if(e.target===e.currentTarget)onClose();}},
+    E('div',{className:'modal',style:{maxWidth:380,textAlign:'center'}},
+      E('div',{style:{fontSize:40,marginBottom:10}},'⚠️'),
+      E('div',{style:{fontSize:15,fontWeight:700,marginBottom:8,color:'#dc2626'}},'정말로 삭제하시겠습니까?'),
+      E('div',{style:{fontSize:13,color:'#64748b',marginBottom:24,lineHeight:1.6}},message),
+      E('div',{style:{display:'flex',gap:10}},
+        E('button',{className:'btn',onClick:onClose,style:{flex:1,padding:'10px'}},'취소'),
+        E('button',{className:'btn',onClick:onConfirm,style:{flex:1,padding:'10px',background:'#dc2626',color:'#fff',border:'none',borderRadius:7,fontFamily:'inherit',fontSize:13,fontWeight:600,cursor:'pointer'}},'삭제')
+      )
+    )
+  );
+}
+
+// ── YearSelect ────────────────────────────────────────────
+function YearSelect({orders,onSelect}){
+  const E=React.createElement;
+  const years=[...new Set(orders.map(o=>o.startDate?.slice(0,4)||'미정'))].sort((a,b)=>b.localeCompare(a));
+  if(years.length===0)years.push(String(new Date().getFullYear()));
+  return E('div',null,
+    E('div',{style:{fontSize:14,fontWeight:700,marginBottom:16}},'수주현황 — 연도 선택'),
+    E('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}},
+      ...years.map(yr=>{
+        const yrOrders=orders.filter(o=>(o.startDate?.slice(0,4)||'미정')===yr);
+        const cnt=yrOrders.length;
+        const totKRW=yrOrders.filter(o=>o.currency!=='USD').reduce((s,o)=>s+(o.projectAmount||0),0);
+        const totUSD=yrOrders.filter(o=>o.currency==='USD').reduce((s,o)=>s+(o.projectAmount||0),0);
+        return E('div',{key:yr,onClick:()=>onSelect(yr),style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,padding:'20px 16px',cursor:'pointer',textAlign:'center',transition:'box-shadow .15s'},
+          onMouseEnter:e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(30,64,175,.15)';e.currentTarget.style.borderColor='#1e40af';},
+          onMouseLeave:e=>{e.currentTarget.style.boxShadow='';e.currentTarget.style.borderColor='#e2e8f0';}},
+          E('div',{style:{fontSize:28,fontWeight:700,color:'#1e40af',marginBottom:6}},yr+'년'),
+          E('div',{style:{fontSize:13,color:'#64748b',marginBottom:4}},cnt+'건'),
+          E('div',{style:{fontSize:12,color:'#94a3b8',marginBottom:totUSD>0?2:0}},totKRW?abbr(totKRW)+'원':'-'),
+          totUSD>0&&E('div',{style:{fontSize:12,color:'#059669',fontWeight:600}},'$'+Number(totUSD).toLocaleString('en-US'))
+        );
+      })
+    )
+  );
+}
+
+// ── OrderList ────────────────────────────────────────────
+function OrderList({orders,saveOrders,managers,clients}){
+  const E=React.createElement;
+  const[year,setYear]=useState(null);
+  const[exp,setExp]=useState({});
+  const[mgr,setMgr]=useState('all');
+  const[status,setStatus]=useState('all');
+  const[srch,setSrch]=useState('');
+  const[modal,setModal]=useState(null);
+  const[delTarget,setDelTarget]=useState(null);
+  const[sortKey,setSortKey]=useState('no');
+  const[sortDir,setSortDir]=useState('asc');
+  const toggle=id=>setExp(e=>({...e,[id]:!e[id]}));
+  const getSt=o=>{const b=oBalance(o);if(!o.projectAmount)return['금액미정','b-gray'];if(b<=0)return['완료','b-green'];if(o.payments.some(p=>p.receivedDate))return['진행중','b-blue'];return['미수','b-amber'];};
+  const handleSort=key=>{if(sortKey===key){setSortDir(d=>d==='asc'?'desc':'asc');}else{setSortKey(key);setSortDir('asc');}};
+  const sortIcon=key=>{if(sortKey!==key)return' ↕';return sortDir==='asc'?' ↑':' ↓';};
+  const thStyle=(key,extra={})=>({cursor:'pointer',userSelect:'none',whiteSpace:'nowrap',...extra});
+
+  // 연도 선택 전
+  if(!year) return E(Fragment,null,
+    E(YearSelect,{orders,onSelect:yr=>{setYear(yr);setExp({});setSrch('');setMgr('all');setStatus('all');}})
+  );
+
+  const yearOrders=orders.filter(o=>(o.startDate?.slice(0,4)||'미정')===year);
+  const filtered=yearOrders.filter(o=>{
+    if(mgr!=='all'&&o.manager!==mgr)return false;
+    if(status!=='all'){const[sl]=getSt(o);if(sl!==status)return false;}
+    if(srch){const q=srch.toLowerCase();if(!o.clientName.toLowerCase().includes(q)&&!o.description.toLowerCase().includes(q)&&!(o.orderNo||'').includes(q))return false;}
+    return true;
+  }).sort((a,b)=>{
+    let va,vb;
+    if(sortKey==='no'){va=a.no||0;vb=b.no||0;}
+    else if(sortKey==='client'){va=a.clientName||'';vb=b.clientName||'';}
+    else if(sortKey==='manager'){va=a.manager||'';vb=b.manager||'';}
+    else if(sortKey==='status'){const ORDER={'미수':0,'진행중':1,'완료':2,'금액미정':3};va=ORDER[getSt(a)[0]]??9;vb=ORDER[getSt(b)[0]]??9;}
+    else{va=a.no||0;vb=b.no||0;}
+    if(typeof va==='string')return sortDir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
+    return sortDir==='asc'?va-vb:vb-va;
+  });
+
+  const confirmDel=()=>{
+    saveOrders(orders.filter(o=>o.id!==delTarget.id));
+    setDelTarget(null);
+  };
+  const upd=u=>saveOrders(orders.map(o=>o.id===u.id?u:o));
+  const save=o=>{
+    if(o.id&&orders.find(x=>x.id===o.id))saveOrders(orders.map(x=>x.id===o.id?o:x));
+    else saveOrders([...orders,{...o,id:uid(),no:orders.length+1}]);
+    setModal(null);
+  };
+  const STATUS_OPTS=['전체','미수','진행중','완료','금액미정'];
+  const yearTotal=yearOrders.reduce((s,o)=>s+(o.projectAmount||0),0);
+  return E(Fragment,null,
+    modal&&E(OrderModal,{order:modal==='new'?null:modal,onSave:save,onClose:()=>setModal(null),managers,clients,orders}),
+    delTarget&&E(DeleteModal,{
+      message:E('span',null,'거래처 ',E('strong',null,delTarget.clientName),' / ',E('span',{style:{color:'#1e40af'}},delTarget.description||delTarget.orderNo),' 수주 건이 영구 삭제됩니다.'),
+      onConfirm:confirmDel,onClose:()=>setDelTarget(null)
+    }),
+    E('div',null,
+      E('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:14}},
+        E('button',{className:'btn sm',onClick:()=>setYear(null)},'← 연도 선택'),
+        E('div',{style:{fontSize:16,fontWeight:700}},year+'년 수주현황'),
+        E('span',{style:{fontSize:12,color:'#64748b'}},yearOrders.length+'건 / '+abbr(yearTotal)+'원')
+      ),
+      E('div',{className:'toolbar'},
+        E('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+          E('input',{className:'inp',placeholder:'수주번호/거래처 검색',value:srch,onChange:e=>setSrch(e.target.value),style:{width:180}}),
+          E('select',{className:'inp',value:mgr,onChange:e=>setMgr(e.target.value),style:{width:90}},
+            E('option',{value:'all'},'담당 전체'),
+            ...(managers||[]).map(m=>E('option',{key:m,value:m},m))
+          ),
+          E('select',{className:'inp',value:status,onChange:e=>setStatus(e.target.value),style:{width:90}},
+            ...STATUS_OPTS.map(s=>E('option',{key:s,value:s===STATUS_OPTS[0]?'all':s},s))
+          ),
+          E('span',{style:{fontSize:11,color:'#64748b'}},filtered.length+'건')
+        ),
+        E('button',{className:'btn pri',onClick:()=>setModal('new')},'+ 수주 추가')
+      ),
+      E('div',{className:'card'},
+        E('div',{style:{overflowX:'auto'}},
+          E('table',null,
+            E('thead',null,E('tr',null,
+              E('th',{style:{width:24}}),
+              E('th',{style:thStyle('no',{width:36}),onClick:()=>handleSort('no')},'No'+sortIcon('no')),
+              E('th',null,'수주번호'),
+              E('th',{style:thStyle('client'),onClick:()=>handleSort('client')},'거래처'+sortIcon('client')),
+              E('th',null,'수행내용'),
+              E('th',{style:thStyle('manager'),onClick:()=>handleSort('manager')},'담당'+sortIcon('manager')),
+              E('th',null,'기간'),
+              E('th',{style:{textAlign:'right'}},'금액'),
+              E('th',{style:{textAlign:'right'}},'미수금'),
+              E('th',{style:thStyle('status'),onClick:()=>handleSort('status')},'상태'+sortIcon('status')),
+              E('th',{style:{textAlign:'center'}},'계산서'),
+              E('th',null)
+            )),
+            E('tbody',null,...filtered.map(o=>{
+              const b=oBalance(o);const[sl,sc]=getSt(o);const hasSubs=o.subcontractors.length>0;
+              return E(Fragment,{key:o.id},
+                E('tr',{style:{cursor:'pointer'},onClick:()=>toggle(o.id)},
+                  E('td',{style:{textAlign:'center',padding:'8px 4px',color:'#94a3b8',fontSize:11}},hasSubs?(exp[o.id]?'▼':'▶'):''),
+                  E('td',{style:{color:'#94a3b8',fontSize:11}},o.no),
+                  E('td',{className:'mono',style:{fontSize:11,fontWeight:600,color:'#1e40af'}},o.orderNo),
+                  E('td',{style:{fontWeight:500,maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},o.clientName),
+                  E('td',{style:{color:'#64748b',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:11}},o.description),
+                  E('td',null,E('span',{className:'badge b-gray'},o.manager)),
+                  E('td',{style:{fontSize:11,color:'#64748b',whiteSpace:'nowrap'}},(o.startDate?.slice(5)||'')+' ~ '+(o.endDate?.slice(5)||'진행중')),
+                  E('td',{className:'mono',style:{textAlign:'right',color:o.currency==='USD'?'#059669':'inherit'}},o.projectAmount?fmtCur(o.projectAmount,o.currency):'—'),
+                  E('td',{className:'mono',style:{textAlign:'right',fontWeight:b>0?600:400,color:b>0?'#d97706':'#94a3b8'}},b>0?fmtCur(b,o.currency):'—'),
+                  E('td',null,E('span',{className:`badge ${sc}`},sl)),
+                  E('td',{style:{textAlign:'center'}},
+                    (()=>{
+                    if(!o.payments||o.payments.length===0)return E('span',{style:{color:'#94a3b8',fontSize:11}},'—');
+                    const total=o.payments.length;
+                    const issued=o.payments.filter(p=>p.invoiceDate).length;
+                    const label=issued===0?'미발행':issued===total?'전체발행':issued+'/'+total;
+                    const cls=issued===0?'b-gray':issued===total?'b-green':'b-amber';
+                    return E('span',{className:'badge '+cls,style:{fontSize:10}},label);
+                    })()
+                  ),
+                  E('td',{onClick:e=>e.stopPropagation(),style:{padding:'4px 6px'}},
+                    E('div',{style:{display:'flex',gap:4}},
+                      E('button',{className:'btn sm',onClick:()=>setModal(o)},'수정'),
+                      E('button',{className:'btn sm dng',onClick:()=>setDelTarget(o)},'삭제')
+                    )
+                  )
+                ),
+                exp[o.id]&&E('tr',{key:o.id+'_e'},
+                  E('td',{colSpan:12,style:{padding:0}},
+                    E(ExpandedDetail,{order:o,onUpdate:upd})
+                  )
+                )
+              );
+            }))
+          )
+        )
+      )
+    )
+  );
+}
+
+
+// ── ClientModal ──────────────────────────────────────────
+function ClientModal({client,onSave,onClose}){
+  const E=React.createElement;
+  const[f,setF]=useState(client||{id:"",code:"",name:"",ceo:"",phone:"",email:"",address:"",note:""});
+  const sf=(k,v)=>setF(x=>({...x,[k]:v}));
+  const iS={background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 9px",color:"#1e293b",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%"};
+  const lbl=t=>E("div",{style:{fontSize:11,color:"#64748b",marginBottom:3}},t);
+  return E("div",{className:"modal-bg",onClick:e=>{if(e.target===e.currentTarget)onClose();}},
+    E("div",{className:"modal",style:{maxWidth:500}},
+      E("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}},
+        E("div",{style:{fontSize:15,fontWeight:700}},client&&client.id?"거래처 수정":"거래처 추가"),
+        E("button",{className:"btn sm",onClick:onClose},"X")
+      ),
+      E("div",{style:{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,marginBottom:10}},
+        E("div",null,lbl("거래처 번호"),E("input",{style:iS,value:f.code,onChange:e=>sf("code",e.target.value)})),
+        E("div",null,lbl("상호명"),E("input",{style:iS,value:f.name,onChange:e=>sf("name",e.target.value)}))
+      ),
+      E("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}},
+        E("div",null,lbl("대표자"),E("input",{style:iS,value:f.ceo,onChange:e=>sf("ceo",e.target.value)})),
+        E("div",null,lbl("전화번호"),E("input",{style:iS,value:f.phone,onChange:e=>sf("phone",e.target.value)}))
+      ),
+      E("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}},
+        E("div",null,lbl("이메일"),E("input",{style:iS,value:f.email,onChange:e=>sf("email",e.target.value)})),
+        E("div",null,lbl("내부 담당자"),E("input",{style:iS,value:f.note,onChange:e=>sf("note",e.target.value)}))
+      ),
+      E("div",{style:{marginBottom:18}},lbl("주소"),E("input",{style:iS,value:f.address,onChange:e=>sf("address",e.target.value)})),
+      E("div",{style:{display:"flex",justifyContent:"flex-end",gap:8}},
+        E("button",{className:"btn",onClick:onClose},"취소"),
+        E("button",{className:"btn pri",onClick:()=>onSave(f)},"저장")
+      )
+    )
+  );
+}
+
+// ── ClientList ───────────────────────────────────────────
+function ClientList({clients,saveClients,orders,saveOrders}){
+  const E=React.createElement;
+  const[modal,setModal]=useState(null);
+  const[srch,setSrch]=useState("");
+  const filtered=(clients||[]).filter(c=>c.name.includes(srch)||c.code.includes(srch)||(c.phone||"").includes(srch));
+  const del=id=>{if(window.confirm("삭제하시겠습니까?"))saveClients(clients.filter(c=>c.id!==id));};
+  const save=cl=>{
+    const existing=clients.find(x=>x.id===cl.id);
+    if(existing){
+      // 이름이 바뀐 경우 수주현황 거래처명도 일괄 업데이트
+      if(existing.name!==cl.name&&orders&&saveOrders){
+        const updatedOrders=orders.map(o=>o.clientName===existing.name?{...o,clientName:cl.name}:o);
+        saveOrders(updatedOrders);
+      }
+      saveClients(clients.map(x=>x.id===cl.id?cl:x));
+    } else {
+      saveClients([...clients,{...cl,id:uid()}]);
+    }
+    setModal(null);
+  };
+  return E(Fragment,null,
+    modal&&E(ClientModal,{client:modal==="new"?null:modal,onSave:save,onClose:()=>setModal(null)}),
+    E("div",null,
+      E("div",{className:"toolbar"},
+        E("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+          E("input",{className:"inp",placeholder:"거래처명 / 번호 검색",value:srch,onChange:e=>setSrch(e.target.value),style:{width:200}}),
+          E("span",{style:{fontSize:11,color:"#64748b"}},filtered.length+"건")
+        ),
+        E("div",{style:{display:"flex",gap:8}},
+          E("button",{className:"btn",style:{whiteSpace:"nowrap"},onClick:()=>{
+            if(!orders||!saveOrders){alert("수주 데이터 로딩 중입니다. 잠시 후 다시 시도해주세요.");return;}
+            let updateCount=0;
+            const updatedOrders=orders.map(o=>{
+              const exact=clients.find(cl=>cl.name===o.clientName);
+              if(exact)return o;
+              const orderCode=(o.orderNo||"").slice(2,4);
+              const matched=clients.find(cl=>cl.code===orderCode);
+              if(matched&&matched.name!==o.clientName){updateCount++;return{...o,clientName:matched.name};}
+              return o;
+            });
+            if(updateCount===0){alert("동기화할 항목이 없습니다. 모든 거래처명이 일치합니다.");}
+            else{saveOrders(updatedOrders);alert(updateCount+"건의 거래처명이 동기화되었습니다.");}
+          }},"🔄 수주 동기화"),
+          E("button",{className:"btn pri",onClick:()=>setModal("new")},"+ 거래처 추가")
+        )
+      ),
+      E("div",{className:"card"},
+        E("div",{style:{overflowX:"auto"}},
+          E("table",null,
+            E("thead",null,E("tr",null,
+              ...["번호","상호명","대표자","전화번호","이메일","주소","내부담당",""].map((h,i)=>E("th",{key:i},h))
+            )),
+            E("tbody",null,...filtered.map(cl=>E("tr",{key:cl.id},
+              E("td",{style:{fontWeight:700,color:"#1e40af",width:50}},cl.code),
+              E("td",{style:{fontWeight:500}},cl.name),
+              E("td",{style:{color:"#64748b"}},cl.ceo||"—"),
+              E("td",{style:{color:"#64748b"}},cl.phone||"—"),
+              E("td",{style:{color:"#64748b",fontSize:11}},cl.email||"—"),
+              E("td",{style:{color:"#64748b",fontSize:11,maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},cl.address||"—"),
+              E("td",{style:{color:"#64748b",fontSize:11}},cl.note||"—"),
+              E("td",{style:{padding:"4px 6px"}},
+                E("div",{style:{display:"flex",gap:4}},
+                  E("button",{className:"btn sm",onClick:()=>setModal(cl)},"수정"),
+                  E("button",{className:"btn sm dng",onClick:()=>del(cl.id)},"삭제")
+                )
+              )
+            )))
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── PasswordModal ─────────────────────────────────────────
+function PasswordModal({password,onSuccess,onClose}){
+  const E=React.createElement;
+  const[pw,setPw]=useState("");
+  const[err,setErr]=useState(false);
+  const check=()=>{if(pw===password){onSuccess();}else{setErr(true);setPw("");}};
+  return E("div",{className:"modal-bg",onClick:e=>{if(e.target===e.currentTarget)onClose();}},
+    E("div",{className:"modal",style:{maxWidth:340,textAlign:"center"}},
+      E("div",{style:{fontSize:40,marginBottom:8}},"🔒"),
+      E("div",{style:{fontSize:16,fontWeight:700,marginBottom:4}},"현금흐름"),
+      E("div",{style:{fontSize:12,color:"#64748b",marginBottom:20}},"비밀번호를 입력하세요"),
+      E("input",{type:"password",className:"inp",placeholder:"비밀번호",value:pw,
+        onChange:e=>setPw(e.target.value),
+        onKeyDown:e=>e.key==="Enter"&&check(),
+        style:{textAlign:"center",fontSize:20,letterSpacing:6,marginBottom:err?6:14}
+      }),
+      err&&E("div",{style:{color:"#dc2626",fontSize:12,marginBottom:10}},"비밀번호가 틀렸습니다"),
+      E("div",{style:{display:"flex",gap:8}},
+        E("button",{className:"btn",onClick:onClose,style:{flex:1}},"취소"),
+        E("button",{className:"btn pri",onClick:check,style:{flex:1}},"확인")
+      )
+    )
+  );
+}
+
+
+// ── ManagerModal ──────────────────────────────────────────
+function ManagerModal({managers,onSave,onClose}){
+  const E=React.createElement;
+  const[list,setList]=useState([...managers]);
+  const[newName,setNewName]=useState("");
+  const add=()=>{const n=newName.trim();if(!n||list.includes(n))return;setList([...list,n]);setNewName("");};
+  const del=m=>setList(list.filter(x=>x!==m));
+  const iS={background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 9px",color:"#1e293b",fontSize:12,fontFamily:"inherit",outline:"none",flex:1};
+  return E("div",{className:"modal-bg",onClick:e=>{if(e.target===e.currentTarget)onClose();}},
+    E("div",{className:"modal",style:{maxWidth:400}},
+      E("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}},
+        E("div",{style:{fontSize:15,fontWeight:700}},"담당자 관리"),
+        E("button",{className:"btn sm",onClick:onClose},"X")
+      ),
+      E("div",{style:{marginBottom:14}},
+        E("div",{style:{fontSize:11,color:"#64748b",marginBottom:8}},"현재 담당자"),
+        ...list.map(m=>E("div",{key:m,style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",background:"#f8fafc",borderRadius:6,marginBottom:5}},
+          E("span",{style:{fontSize:13}},m),
+          E("button",{className:"btn sm dng",onClick:()=>del(m)},"삭제")
+        ))
+      ),
+      E("div",{style:{display:"flex",gap:8,marginBottom:18}},
+        E("input",{style:iS,placeholder:"새 담당자 이름",value:newName,onChange:e=>setNewName(e.target.value),onKeyDown:e=>e.key==="Enter"&&add()}),
+        E("button",{className:"btn pri",onClick:add},"+ 추가")
+      ),
+      E("div",{style:{display:"flex",justifyContent:"flex-end",gap:8}},
+        E("button",{className:"btn",onClick:onClose},"취소"),
+        E("button",{className:"btn pri",onClick:()=>onSave(list)},"저장")
+      )
+    )
+  );
+}
+
+// ── CashFlow ─────────────────────────────────────────────
+function CashFlow({orders,cfData,saveCf,cfPassword,savePw,onLock}){
+  const E=React.createElement;
+  const months=Array.from({length:12},(_,i)=>{const d=new Date(2026,i,1);return d.toISOString().slice(0,7);});
+  const[sel,setSel]=useState(thisM);
+  const prevYm=(()=>{const d=new Date(sel+'-01');d.setMonth(d.getMonth()-1);return d.toISOString().slice(0,7);})();
+
+  const curInc=[];
+  orders.forEach(o=>o.payments.forEach(p=>{
+    if(p.invoiceDate&&ym(p.invoiceDate)<sel&&!p.receivedDate)
+      curInc.push({name:o.clientName,desc:o.description,date:p.invoiceDate,amount:p.amount,type:p.type,currency:o.currency||'KRW'});
+  }));
+  curInc.sort((a,b)=>a.date.localeCompare(b.date));
+
+  const nxtInc=[];
+  orders.forEach(o=>o.payments.forEach(p=>{
+    if(p.invoiceDate&&ym(p.invoiceDate)===sel&&!p.receivedDate)
+      nxtInc.push({name:o.clientName,desc:o.description,date:p.invoiceDate,amount:p.amount,type:p.type,currency:o.currency||'KRW'});
+  }));
+  nxtInc.sort((a,b)=>a.date.localeCompare(b.date));
+
+  const totCur=curInc.reduce((s,x)=>s+x.amount,0);
+  const totNxt=nxtInc.reduce((s,x)=>s+x.amount,0);
+
+  const unpaidInv=[];
+  orders.forEach(o=>o.payments.forEach(p=>{
+    if(!p.invoiceDate&&(p.amount||0)>0)
+      unpaidInv.push({orderNo:o.orderNo,clientName:o.clientName,desc:o.description,type:p.type,amount:p.amount,currency:o.currency||'KRW',endDate:o.endDate,manager:o.manager});
+  }));
+  unpaidInv.sort((a,b)=>(a.endDate||'9999').localeCompare(b.endDate||'9999'));
+  const unpaidKRW=unpaidInv.filter(x=>x.currency!=='USD').reduce((s,x)=>s+x.amount,0);
+  const unpaidUSD=unpaidInv.filter(x=>x.currency==='USD').reduce((s,x)=>s+x.amount,0);
+
+  const CF_DEFAULT={expenses:[],banks:[{id:'bk01',name:'기업은행(입출금)',balance:0},{id:'bk02',name:'기업은행 025',balance:0},{id:'bk03',name:'퇴직연금',balance:0},{id:'bk04',name:'마이너스',balance:0},{id:'bk05',name:'농협',balance:0},{id:'bk06',name:'피엠에이치',balance:0},{id:'bk07',name:'하나',balance:0}],loans:[{id:'ln01',name:'기업은행 회전대출',principal:0,repaid:0,rate:0,dueDate:''},{id:'ln02',name:'KB증권 혁신형',principal:291200000,repaid:0,rate:0,dueDate:''}],laborCost:140000000};
+  const cf=cfData[sel]||CF_DEFAULT;
+  const sc=u=>saveCf({...cfData,[sel]:{...cf,...u}});
+
+  const totBk=(cf.banks||[]).reduce((s,b)=>s+(b.balance||0),0);
+  const addBank=()=>sc({banks:[...(cf.banks||[]),{id:uid(),name:'',balance:0}]});
+  const rmBank=id=>sc({banks:(cf.banks||[]).filter(b=>b.id!==id)});
+  const upBank=(id,k,v)=>sc({banks:(cf.banks||[]).map(b=>b.id===id?{...b,[k]:v}:b)});
+
+  const calcMonthly=(principal,repaid,rate)=>{const bal=(principal||0)-(repaid||0);return rate>0?Math.round(bal*(rate/100)/12):0;};
+  const totLoanBal=(cf.loans||[]).reduce((s,l)=>s+((l.principal||0)-(l.repaid||0)),0);
+  const totMonthly=(cf.loans||[]).reduce((s,l)=>s+calcMonthly(l.principal,l.repaid,l.rate),0);
+  const addLoan=()=>sc({loans:[...(cf.loans||[]),{id:uid(),name:'',principal:0,repaid:0,rate:0,dueDate:''}]});
+  const rmLoan=id=>sc({loans:(cf.loans||[]).filter(l=>l.id!==id)});
+  const upLoan=(id,k,v)=>sc({loans:(cf.loans||[]).map(l=>l.id===id?{...l,[k]:v}:l)});
+
+  const totExp=(cf.expenses||[]).reduce((s,e)=>s+(e.amount||0),0)+(cf.laborCost||0);
+  const addExp=()=>sc({expenses:[...(cf.expenses||[]),{id:uid(),name:'',amount:0,due:''}]});
+  const rmExp=id=>sc({expenses:(cf.expenses||[]).filter(e=>e.id!==id)});
+  const upExp=(id,k,v)=>sc({expenses:(cf.expenses||[]).map(e=>e.id===id?{...e,[k]:v}:e)});
+
+  const changePw=()=>{const np=window.prompt('새 비밀번호 입력:','');if(np!==null&&np.trim()!==''){savePw(np.trim());alert('변경 완료!');}};
+  const iS={background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:5,padding:'5px 8px',color:'#1e293b',fontSize:12,fontFamily:'inherit',outline:'none',width:'100%'};
+
+  const totExpected=totExp+totMonthly;
+  const netFlow=totCur-totExpected;
+
+  return E('div',null,
+    E('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}},
+      E('div',{style:{fontSize:14,fontWeight:700}},'현금흐름'),
+      E('div',{style:{display:'flex',gap:8}},
+        E('button',{className:'btn sm',onClick:changePw},'비밀번호 변경'),
+        E('button',{className:'btn sm',onClick:onLock,style:{color:'#dc2626'}},'잠금')
+      )
+    ),
+    E('div',{className:'month-tabs'},...months.map(m=>E('button',{key:m,onClick:()=>setSel(m),className:'m-tab'+(sel===m?' on':'')},m.slice(5)+'월'))),
+    E('div',{className:'kpis',style:{gridTemplateColumns:'repeat(5,1fr)',marginBottom:14}},
+      ...[
+        ['당월 수입 (미입금)',abbr(totCur)+'원','당월 이전 발행 · 미입금 전체','#059669'],
+        ['당월 예상 지출',abbr(totExpected)+'원','지출합계 + 월이자','#d97706'],
+        ['익월 예상 수입',abbr(totNxt)+'원','당월 발행 기준','#1e40af'],
+        ['당월 수지',(netFlow>=0?'+':'')+abbr(netFlow)+'원','당월수입 - 당월예상지출',netFlow>=0?'#059669':'#dc2626']
+      ].map(([l,v,s,color],i)=>E('div',{key:i,className:'kpi'},
+        E('div',{className:'kpi-lbl'},l),
+        E('div',{className:'kpi-val',style:{color}},v),
+        E('div',{className:'kpi-sub'},s)
+      )),
+      (()=>{
+        const safe=netFlow>=0||(totBk+netFlow>=0);
+        const deficit=netFlow<0?Math.abs(netFlow):0;
+        const coverPct=deficit>0?Math.min(100,Math.round(totBk/deficit*100)):100;
+        return E('div',{className:'kpi',style:{border:'2px solid '+(safe?'#059669':'#dc2626'),background:safe?'#f0fdf4':'#fff1f2'}},
+          E('div',{className:'kpi-lbl',style:{color:safe?'#059669':'#dc2626',fontWeight:600}},safe?'✅ 자금 안정':'⚠️ 자금 위험'),
+          E('div',{style:{fontSize:22,fontWeight:700,color:safe?'#059669':'#dc2626',marginBottom:2}},
+            safe?(netFlow>=0?'수입 > 지출':'잔고로 커버 가능'):'잔고 부족'
+          ),
+          E('div',{style:{fontSize:11,color:'#64748b'}},
+            netFlow>=0
+              ?'당월 수지 플러스'
+              :'부족분 '+abbr(deficit)+'원 / 잔고 커버율 '+coverPct+'%'
+          )
+        );
+      })()
+    ),
+    E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}},
+      E('div',null,
+        E('div',{className:'card',style:{marginBottom:14}},
+          E('div',{className:'card-hdr',style:{color:'#059669'}},sel.slice(5)+'월 당월 수입 (미입금 전체)'),
+          E('div',{style:{padding:'10px 12px'}},
+            curInc.length===0
+              ?E('div',{style:{fontSize:12,color:'#94a3b8',padding:'8px 0'}},'미입금 건이 없습니다 ✓')
+              :E('table',null,
+                E('thead',null,E('tr',null,...['거래처','수행내용','발행일','금액'].map(h=>E('th',{key:h,style:h==='금액'?{textAlign:'right'}:{}},h)))),
+                E('tbody',null,
+                  ...curInc.map((x,i)=>E('tr',{key:i},
+                    E('td',{style:{fontWeight:500}},x.name),
+                    E('td',{style:{color:'#64748b',fontSize:11,maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},x.desc),
+                    E('td',{style:{fontSize:11,color:'#64748b'}},x.date?.slice(5)),
+                    E('td',{className:'mono',style:{textAlign:'right'}},fmtCur(x.amount,x.currency))
+                  )),
+                  E('tr',null,E('td',{colSpan:3,style:{fontWeight:600}},'합계'),E('td',{className:'mono',style:{textAlign:'right',fontWeight:700,color:'#059669'}},fmt(totCur)+'원'))
+                )
+              )
+          )
+        ),
+        E('div',{className:'card'},
+          E('div',{className:'card-hdr',style:{color:'#1e40af'}},'익월 예상 수입'),
+          E('div',{style:{padding:'10px 12px'}},
+            nxtInc.length===0
+              ?E('div',{style:{fontSize:12,color:'#94a3b8',padding:'8px 0'}},'당월 발행 계산서 없음')
+              :E('table',null,
+                E('thead',null,E('tr',null,...['거래처','수행내용','발행일','금액'].map(h=>E('th',{key:h,style:h==='금액'?{textAlign:'right'}:{}},h)))),
+                E('tbody',null,
+                  ...nxtInc.map((x,i)=>E('tr',{key:i},
+                    E('td',{style:{fontWeight:500}},x.name),
+                    E('td',{style:{color:'#64748b',fontSize:11,maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},x.desc),
+                    E('td',{style:{fontSize:11,color:'#64748b'}},x.date?.slice(5)),
+                    E('td',{className:'mono',style:{textAlign:'right'}},fmtCur(x.amount,x.currency))
+                  )),
+                  E('tr',null,E('td',{style:{fontWeight:600}},'합계'),E('td'),E('td'),E('td',{className:'mono',style:{textAlign:'right',fontWeight:700,color:'#1e40af'}},fmt(totNxt)+'원'))
+                )
+              )
+          )
+        )
+      ),
+      E('div',null,
+        E('div',{className:'card',style:{marginBottom:14}},
+          E('div',{className:'card-hdr',style:{color:'#d97706'}},'지출'),
+          E('div',{style:{padding:'10px 12px'}},
+            E('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8}},
+              E('span',{style:{fontSize:12,minWidth:90,color:'#64748b'}},'인건비'),
+              E(FmtInput,{value:cf.laborCost||0,onChange:v=>sc({laborCost:v}),style:{...iS,flex:1}}),
+              E('span',{style:{fontSize:11,color:'#64748b',minWidth:60,textAlign:'right'}},abbr(cf.laborCost||0))
+            ),
+            ...(cf.expenses||[]).map(e=>E('div',{key:e.id,style:{display:'flex',gap:5,marginBottom:5,alignItems:'center'}},
+              E('input',{style:{...iS,flex:2},placeholder:'항목명',value:e.name,onChange:ev=>upExp(e.id,'name',ev.target.value)}),
+              E(FmtInput,{value:e.amount||0,onChange:v=>upExp(e.id,'amount',v),style:{...iS,flex:1}}),
+              E('input',{type:'date',style:{...iS,flex:1},value:e.due||'',onChange:ev=>upExp(e.id,'due',ev.target.value)}),
+              E('button',{className:'btn sm dng',onClick:()=>rmExp(e.id)},'✕')
+            )),
+            E('button',{className:'btn sm',style:{marginTop:4},onClick:addExp},'+ 항목 추가'),
+            E('div',{style:{display:'flex',justifyContent:'flex-end',paddingTop:8,marginTop:8,borderTop:'1px solid #f1f5f9',fontSize:12,fontWeight:600,color:'#d97706'}},'합계: '+fmt(totExp)+'원')
+          )
+        ),
+        E('div',{className:'card',style:{marginBottom:14}},
+          E('div',{className:'card-hdr',style:{flexWrap:'wrap',gap:6}},
+            E('span',null,'은행 잔고'),
+            E('div',{style:{display:'flex',alignItems:'center',gap:6,marginLeft:'auto'}},
+              E('span',{style:{fontSize:11,color:'#94a3b8'}},'기준일시:'),
+              E('input',{type:'datetime-local',
+                value:cf.bankBaseDate||'',
+                onChange:e=>sc({bankBaseDate:e.target.value}),
+                style:{fontSize:11,padding:'2px 6px',border:'1px solid #e2e8f0',borderRadius:5,color:'#64748b',fontFamily:'inherit',background:'#f8fafc',outline:'none'}
+              }),
+              E('button',{className:'btn sm',onClick:addBank},'+ 추가')
+            )
+          ),
+          E('div',{style:{padding:'10px 12px'}},
+            ...(cf.banks||[]).map(b=>E('div',{key:b.id,style:{display:'flex',gap:6,marginBottom:6,alignItems:'center'}},
+              E('input',{style:{...iS,flex:2},placeholder:'은행명',value:b.name,onChange:e=>upBank(b.id,'name',e.target.value)}),
+              E(FmtInput,{value:b.balance||0,onChange:v=>upBank(b.id,'balance',v),style:{...iS,flex:1}}),
+              E('button',{className:'btn sm dng',onClick:()=>rmBank(b.id)},'✕')
+            )),
+            E('div',{style:{display:'flex',justifyContent:'flex-end',paddingTop:6,borderTop:'1px solid #f1f5f9',fontSize:12,fontWeight:600,color:'#1e40af'}},'합계: '+fmt(totBk)+'원')
+          )
+        ),
+        E('div',{className:'card'},
+          E('div',{className:'card-hdr'},
+            E('span',null,'대출 현황'),
+            E('button',{className:'btn sm',onClick:addLoan,style:{marginLeft:'auto'}},'+ 추가')
+          ),
+          E('div',{style:{padding:'10px 12px'}},
+            ...(cf.loans||[]).map(l=>{
+              const bal=(l.principal||0)-(l.repaid||0);
+              const monthly=calcMonthly(l.principal,l.repaid,l.rate);
+              return E('div',{key:l.id,style:{background:'#f8fafc',borderRadius:8,padding:10,marginBottom:8,border:'1px solid #e2e8f0'}},
+                E('div',{style:{display:'flex',gap:6,marginBottom:6,alignItems:'center'}},
+                  E('input',{style:{...iS,flex:2},placeholder:'대출명',value:l.name,onChange:e=>upLoan(l.id,'name',e.target.value)}),
+                  E('button',{className:'btn sm dng',onClick:()=>rmLoan(l.id)},'✕')
+                ),
+                E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:6}},
+                  E('div',null,E('div',{style:{fontSize:10,color:'#94a3b8',marginBottom:2}},'대출원금'),E(FmtInput,{value:l.principal||0,onChange:v=>upLoan(l.id,'principal',v),style:iS})),
+                  E('div',null,E('div',{style:{fontSize:10,color:'#94a3b8',marginBottom:2}},'상환액 누계'),E(FmtInput,{value:l.repaid||0,onChange:v=>upLoan(l.id,'repaid',v),style:iS})),
+                  E('div',null,E('div',{style:{fontSize:10,color:'#94a3b8',marginBottom:2}},'이자율 (연%)'),E('input',{type:'number',style:iS,step:'0.1',value:l.rate||0,onChange:e=>upLoan(l.id,'rate',Number(e.target.value))})),
+                  E('div',null,E('div',{style:{fontSize:10,color:'#94a3b8',marginBottom:2}},'만기일'),E('input',{type:'date',style:iS,value:l.dueDate||'',onChange:e=>upLoan(l.id,'dueDate',e.target.value)}))
+                ),
+                E('div',{style:{display:'flex',justifyContent:'space-between',paddingTop:6,borderTop:'1px solid #e2e8f0',fontSize:11}},
+                  E('span',{style:{color:'#64748b'}},'대출잔액: ',E('strong',{style:{color:'#dc2626'}},fmt(bal)+'원')),
+                  E('span',{style:{color:'#64748b'}},'월이자: ',E('strong',{style:{color:'#dc2626'}},fmt(monthly)+'원'))
+                )
+              );
+            }),
+            E('div',{style:{display:'flex',justifyContent:'space-between',paddingTop:8,borderTop:'1px solid #f1f5f9',fontSize:12,fontWeight:600}},
+              E('span',{style:{color:'#dc2626'}},'대출잔액 합계: '+fmt(totLoanBal)+'원'),
+              E('span',{style:{color:'#d97706'}},'월이자 합계: '+fmt(totMonthly)+'원')
+            )
+          )
+        )
+      )
+    ),
+    E('div',{className:'card',style:{marginTop:14}},
+      E('div',{className:'card-hdr',style:{color:'#dc2626'}},
+        E('span',null,'⚠️ 세금계산서 미발행 목록'),
+        E('span',{style:{fontSize:11,color:'#94a3b8',fontWeight:400,marginLeft:8}},unpaidInv.length+'건')
+      ),
+      unpaidInv.length===0
+        ?E('div',{style:{padding:'16px',fontSize:12,color:'#94a3b8',textAlign:'center'}},'미발행 건이 없습니다 ✓')
+        :E('div',{style:{overflowX:'auto'}},
+          E('table',null,
+            E('thead',null,E('tr',null,
+              ...['수주번호','거래처','수행내용','구분','금액','완료예정','담당'].map(h=>E('th',{key:h,style:h==='금액'?{textAlign:'right'}:{}},h))
+            )),
+            E('tbody',null,
+              ...unpaidInv.map((x,i)=>E('tr',{key:i},
+                E('td',{className:'mono',style:{fontSize:11,color:'#1e40af'}},x.orderNo),
+                E('td',{style:{fontWeight:500}},x.clientName),
+                E('td',{style:{color:'#64748b',fontSize:11,maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},x.desc),
+                E('td',null,E('span',{className:'badge b-gray'},x.type)),
+                E('td',{className:'mono',style:{textAlign:'right'}},fmtCur(x.amount,x.currency)),
+                E('td',{style:{fontSize:11,color:x.endDate&&x.endDate<todayStr?'#dc2626':'#64748b'}},x.endDate||'미정'),
+                E('td',null,E('span',{className:'badge b-gray'},x.manager))
+              )),
+              E('tr',{style:{background:'#fef2f2'}},
+                E('td',{colSpan:4,style:{fontWeight:600,padding:'8px 12px'}},'미발행 합계'),
+                E('td',{className:'mono',style:{textAlign:'right',fontWeight:700,color:'#dc2626',padding:'8px 12px'}},
+                  fmt(unpaidKRW)+'원'+(unpaidUSD>0?' / $'+unpaidUSD.toLocaleString('en-US'):'')
+                ),
+                E('td'),E('td')
+              )
+            )
+          )
+        )
+    )
+  );
+}
+
+
+// ── App ──────────────────────────────────────────────────
+function App(){
+  const E=React.createElement;
+  const[tab,setTab]=useState("dashboard");
+  const[orders,setOrders]=useState(null);
+  const[clients,setClients]=useState(null);
+  const[cfData,setCfData]=useState({});
+  const[managers,setManagers]=useState(null);
+  const[cfUnlocked,setCfUnlocked]=useState(false);
+  const[showPwModal,setShowPwModal]=useState(false);
+  const[showMgrModal,setShowMgrModal]=useState(false);
+  const[cfPassword,setCfPassword]=useState("1234");
+
+  useEffect(()=>{
+    if(!FB_OK){
+      Promise.all([dbGet("orders"),dbGet("clients"),dbGet("cashflow"),dbGet("settings")]).then(([o,cl,cf,st])=>{
+        setOrders(o||INIT);
+        setClients(cl||INIT_CLIENTS);
+        setCfData(cf||{});
+        if(st&&st.cfPassword)setCfPassword(st.cfPassword);
+        if(st&&st.managers)setManagers(st.managers); else setManagers(INIT_MANAGERS);
+      });
+      return;
+    }
+    const u1=dbListen("orders",o=>setOrders(o));
+    const u2=dbListen("clients",cl=>setClients(cl));
+    const u3=dbListen("cashflow",cf=>setCfData(cf));
+    const u4=dbListen("settings",st=>{
+      if(st&&st.cfPassword)setCfPassword(st.cfPassword);
+      if(st&&st.managers)setManagers(st.managers);
+    });
+    Promise.all([dbGet("orders"),dbGet("clients"),dbGet("cashflow"),dbGet("settings")]).then(([o,cl,cf,st])=>{
+      if(!o)dbSet("orders",INIT).then(()=>setOrders(INIT)); else setOrders(o);
+      if(!cl)dbSet("clients",INIT_CLIENTS).then(()=>setClients(INIT_CLIENTS)); else setClients(cl);
+      setCfData(cf||{});
+      const pw=(st&&st.cfPassword)||"1234";
+      const mgrs=(st&&st.managers)||INIT_MANAGERS;
+      setCfPassword(pw);
+      setManagers(mgrs);
+      if(!st)dbSet("settings",{cfPassword:pw,managers:mgrs});
+    });
+    return()=>{if(u1)u1();if(u2)u2();if(u3)u3();if(u4)u4();};
+  },[]);
+
+  const saveO=o=>{setOrders(o);dbSet("orders",o);};
+  const saveCl=cl=>{setClients(cl);dbSet("clients",cl);};
+  const saveCf=cf=>{setCfData(cf);dbSet("cashflow",cf);};
+  const savePw=pw=>{setCfPassword(pw);dbSet("settings",{cfPassword:pw,managers:managers||INIT_MANAGERS});};
+  const saveMgrs=mgrs=>{setManagers(mgrs);dbSet("settings",{cfPassword,managers:mgrs});setShowMgrModal(false);};
+
+  const handleTab=id=>{
+    if(id==="cashflow"&&!cfUnlocked){setShowPwModal(true);return;}
+    setTab(id);
+  };
+
+  const mgrs=managers||INIT_MANAGERS;
+
+  if(!FB_OK)return E(SetupScreen,null);
+  if(!orders||!clients||!managers)return E("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:"#64748b"}},"로딩 중...");
+
+  const tabs=[
+    {id:"dashboard",label:"대시보드"},
+    {id:"clients",label:"거래처 관리"},
+    {id:"orders",label:"수주현황"},
+    {id:"cashflow",label:"현금흐름"},
+  ];
+
+  return E("div",null,
+    showPwModal&&E(PasswordModal,{password:cfPassword,onSuccess:()=>{setCfUnlocked(true);setShowPwModal(false);setTab("cashflow");},onClose:()=>setShowPwModal(false)}),
+    showMgrModal&&E(ManagerModal,{managers:mgrs,onSave:saveMgrs,onClose:()=>setShowMgrModal(false)}),
+    E("div",{className:"hdr"},
+      E("div",{className:"hdr-inner"},
+        E("div",{className:"logo"},"케이엠제이 수주관리"),
+        ...tabs.map(t=>E("button",{key:t.id,onClick:()=>handleTab(t.id),className:"tab"+(tab===t.id?" on":"")},t.label)),
+        E("button",{className:"btn sm",onClick:()=>setShowMgrModal(true),style:{marginLeft:"auto",marginRight:8}},"담당자 관리"),
+        E("span",{className:"sync-badge "+(FB_OK?"sync-live":"sync-local")},FB_OK?"실시간 공유":"로컬 모드")
+      )
+    ),
+    E("div",{className:"main"},
+      tab==="dashboard"&&E(Dashboard,{orders}),
+      tab==="clients"&&E(ClientList,{clients,saveClients:saveCl,orders,saveOrders:saveO}),
+      tab==="orders"&&E(OrderList,{orders,saveOrders:saveO,managers:mgrs,clients}),
+      tab==="cashflow"&&E(CashFlow,{orders,cfData,saveCf,cfPassword,savePw,onLock:()=>{setCfUnlocked(false);setTab("dashboard");}})
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
