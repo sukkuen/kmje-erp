@@ -142,6 +142,18 @@ const PAY_TYPES = ["계약금","1차기성","2차기성","3차기성","4차기�
 const INIT_MANAGERS = ["김경래","이충영","조용집","박명호","고석근","이일섭"];
 const mkP = (type,amount,inv=false,invD=null,recD=null) => ({id:uid(),type,amount:amount||0,invoiceIssued:!!inv,invoiceDate:invD,receivedDate:recD,paidDate:null});
 const oBalance = o => (o.projectAmount||0) - o.payments.filter(p=>p.receivedDate).reduce((s,p)=>s+(p.amount||0),0);
+// 수주의 계산서 발행 요약 배지 상태 (요청 > 부분발행 순으로 표시)
+const invSummary = o => {
+  const ps = o.payments||[];
+  const total = ps.length;
+  if(total===0) return {label:'—', cls:'none'};
+  const issued = ps.filter(p=>p.invoiceDate).length;
+  const reqCount = ps.filter(p=>p.invoiceRequested && !p.invoiceDate).length;
+  if(issued===total) return {label:'전체발행', cls:'b-green'};
+  if(reqCount>0) return {label:'요청 '+reqCount, cls:'b-yellow'};
+  if(issued>0) return {label:issued+'/'+total, cls:'b-amber'};
+  return {label:'미발행', cls:'b-gray'};
+};
 const sUnpaid = s => (s.contractAmount||0) - s.payments.filter(p=>p.paidDate).reduce((s2,p)=>s2+(p.amount||0),0);
 
 const INIT = [
@@ -218,7 +230,7 @@ function SetupScreen() {
 }
 
 // ── Dashboard ────────────────────────────────────────────
-function Dashboard({orders}){
+function Dashboard({orders,saveOrders}){
   const krwOrders=orders.filter(o=>o.currency!=='USD');
   const usdOrders=orders.filter(o=>o.currency==='USD');
   const totKRW=krwOrders.reduce((s,o)=>s+(o.projectAmount||0),0);
@@ -243,6 +255,12 @@ function Dashboard({orders}){
   ];
   const top=[...orders].filter(o=>oBalance(o)>0).sort((a,b)=>oBalance(b)-oBalance(a)).slice(0,10);
   const E=React.createElement;
+  // 발행 요청된 결제항목 수집 (요청됐고 아직 미발행). 발행일 입력되면 자동 제외됨.
+  const reqItems=[];
+  orders.forEach(o=>(o.payments||[]).forEach(p=>{if(p.invoiceRequested&&!p.invoiceDate)reqItems.push({o,p});}));
+  reqItems.sort((a,b)=>(a.o.clientName||'').localeCompare(b.o.clientName||'')||(a.o.startDate||'').localeCompare(b.o.startDate||''));
+  const issueP=(orderId,payId,date)=>{if(!saveOrders)return;saveOrders(orders.map(o=>o.id!==orderId?o:{...o,payments:o.payments.map(p=>p.id!==payId?p:{...p,invoiceDate:date||null})}));};
+  const reqInpS={background:'#fff',border:'1px solid #e2e8f0',borderRadius:5,padding:'4px 7px',color:'#1e293b',fontSize:11,fontFamily:'inherit',outline:'none'};
   return E('div',null,
     E('div',{className:'kpis'},
       ...kpis.map((k,i)=>E('div',{key:i,className:'kpi'},
@@ -251,6 +269,23 @@ function Dashboard({orders}){
         k.usd>0&&E('div',{style:{fontSize:13,fontWeight:600,color:'#059669',marginBottom:2}},'$'+Number(k.usd).toLocaleString('en-US')),
         E('div',{className:'kpi-sub'},k.sub)
       ))
+    ),
+    reqItems.length>0&&E('div',{className:'card',style:{borderLeft:'3px solid #eab308'}},
+      E('div',{className:'card-hdr'},E('span',null,'📋 세금계산서 발행 요청'),E('span',{style:{fontSize:11,color:'#94a3b8',fontWeight:400,marginLeft:6}},'('+reqItems.length+'건 · 발행일 입력 시 완료 처리)')),
+      E('div',{style:{overflowX:'auto'}},
+        E('table',null,
+          E('thead',null,E('tr',null,...['수주번호','거래처','수행내용','담당','구분','금액','발행일 입력'].map(h=>E('th',{key:h,style:['금액'].includes(h)?{textAlign:'right'}:['구분','담당','발행일 입력'].includes(h)?{textAlign:'center'}:{}},h)))),
+          E('tbody',null,...reqItems.map(({o,p})=>E('tr',{key:o.id+'_'+p.id},
+            E('td',{className:'mono',style:{fontSize:11,fontWeight:600,color:'#1e40af'}},o.orderNo),
+            E('td',{style:{fontWeight:500}},o.clientName),
+            E('td',{style:{color:'#64748b',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},o.description),
+            E('td',{style:{textAlign:'center'}},E('span',{className:'badge b-gray'},o.manager)),
+            E('td',{style:{textAlign:'center'}},E('span',{className:'badge b-yellow'},p.type)),
+            E('td',{className:'mono',style:{textAlign:'right',fontWeight:600}},fmtCur(p.amount,o.currency)),
+            E('td',{style:{textAlign:'center'}},E('input',{type:'date',value:'',title:'발행일을 입력하면 요청이 완료 처리됩니다',onChange:e=>issueP(o.id,p.id,e.target.value||null),style:reqInpS}))
+          )))
+        )
+      )
     ),
     E('div',{className:'card'},
       E('div',{className:'card-hdr'},E('span',null,'미수금 현황'),E('span',{style:{fontSize:11,color:'#94a3b8',fontWeight:400,marginLeft:6}},'(미수금 상위 10건)')),
@@ -268,7 +303,7 @@ function Dashboard({orders}){
               E('td',{className:'mono',style:{textAlign:'right',color:o.currency==='USD'?'#059669':'inherit'}},fmtCur(o.projectAmount,o.currency)),
               E('td',{className:'mono',style:{textAlign:'right',color:'#d97706',fontWeight:600}},fmtCur(b,o.currency)),
               E('td',{style:{textAlign:'center'}},(()=>{if(!o.projectAmount)return E('span',{className:'badge b-gray'},'금액미정');if(b<=0)return E('span',{className:'badge b-green'},'완료');if(o.payments&&o.payments.some(p=>p.receivedDate))return E('span',{className:'badge b-blue'},'진행중');return E('span',{className:'badge b-amber'},'미수');})()),
-              E('td',{style:{textAlign:'center'}},(()=>{const tot=o.payments?o.payments.length:0;const iss=o.payments?o.payments.filter(p=>p.invoiceDate).length:0;if(tot===0)return E('span',{style:{color:'#94a3b8',fontSize:11}},'—');const lbl=iss===0?'미발행':iss===tot?'전체발행':iss+'/'+tot;const cls=iss===0?'b-gray':iss===tot?'b-green':'b-amber';return E('span',{className:'badge '+cls,style:{fontSize:10}},lbl);})()),
+              E('td',{style:{textAlign:'center'}},(()=>{const s=invSummary(o);if(s.cls==='none')return E('span',{style:{color:'#94a3b8',fontSize:11}},'—');return E('span',{className:'badge '+s.cls,style:{fontSize:10}},s.label);})()),
               E('td',null,E('div',{className:'prog-bar'},
                 E('div',{className:'prog-bg'},E('div',{className:'prog-fill',style:{width:pct+'%',background:pct>=100?'#059669':'#1e40af'}})),
                 E('span',{style:{fontSize:10,color:'#64748b',minWidth:26,textAlign:'right'}},pct+'%')
@@ -297,7 +332,7 @@ function ExpandedDetail({order,onUpdate}){
     const payments=idx>=0?[...order.payments.slice(0,idx),newP,...order.payments.slice(idx)]:[...order.payments,newP];
     onUpdate({...order,payments});
   };
-  const pSt=p=>{if(p.receivedDate)return['입금완료','b-green'];if(p.invoiceDate)return['발행완료','b-blue'];return['미발행','b-gray'];};
+  const pSt=p=>{if(p.receivedDate)return['입금완료','b-green'];if(p.invoiceDate)return['발행완료','b-blue'];if(p.invoiceRequested)return['요청됨','b-yellow'];return['미발행','b-gray'];};
   const sSt=p=>{if(p.paidDate)return['지급완료','b-green'];if(p.invoiceDate)return['계산서수취','b-blue'];return['미수취','b-gray'];};
   const iS={background:'#fff',border:'1px solid #e2e8f0',borderRadius:5,padding:'4px 7px',color:'#1e293b',fontSize:11,fontFamily:'inherit',outline:'none'};
   return E('div',{className:'exp-area'},
@@ -317,7 +352,7 @@ function ExpandedDetail({order,onUpdate}){
           ),
           E('td',null,E('input',{type:'date',value:p.invoiceDate||'',onChange:e=>setP(i,'invoiceDate',e.target.value||null),style:{...iS,width:130}})),
           E('td',null,E('input',{type:'date',value:p.receivedDate||'',onChange:e=>setP(i,'receivedDate',e.target.value||null),style:{...iS,width:130}})),
-          E('td',null,E('span',{className:`badge ${sc}`},sl)),
+          E('td',null,(()=>{const clickable=!p.receivedDate&&!p.invoiceDate;return E('span',{className:`badge ${sc}`,style:{cursor:clickable?'pointer':'default'},title:clickable?(p.invoiceRequested?'클릭: 발행요청 취소':'클릭: 세금계산서 발행 요청'):'',onClick:clickable?()=>setP(i,'invoiceRequested',!p.invoiceRequested):null},sl);})()),
           E('td',{style:{width:40}},E('button',{className:'btn sm dng',style:{padding:'2px 6px'},onClick:()=>delP(p.id)},'✕'))
         );}))
       )
@@ -657,18 +692,11 @@ function OrderList({orders,saveOrders,managers,clients}){
                   E('td',{className:'mono',style:{textAlign:'right',color:o.currency==='USD'?'#059669':'inherit'}},o.projectAmount?fmtCur(o.projectAmount,o.currency):'—'),
                   E('td',{className:'mono',style:{textAlign:'right',fontWeight:b>0?600:400,color:b>0?'#d97706':'#94a3b8'}},b>0?fmtCur(b,o.currency):'—'),
                   E('td',null,E('span',{className:`badge ${sc}`},sl)),
-                  E('td',{style:{textAlign:'center'},onClick:e=>e.stopPropagation()},
+                  E('td',{style:{textAlign:'center'}},
                     (()=>{
-                    if(!o.payments||o.payments.length===0)return E('span',{style:{color:'#94a3b8',fontSize:11}},'—');
-                    const total=o.payments.length;
-                    const issued=o.payments.filter(p=>p.invoiceDate).length;
-                    const req=!!o.invoiceRequested;
-                    let label,cls,onClk=null,title='';
-                    if(issued===total){label='전체발행';cls='b-green';}
-                    else if(issued>0){label=issued+'/'+total;cls='b-amber';}
-                    else if(req){label='요청됨';cls='b-yellow';onClk=()=>upd({...o,invoiceRequested:false});title='클릭: 발행요청 취소';}
-                    else{label='미발행';cls='b-gray';onClk=()=>upd({...o,invoiceRequested:true});title='클릭: 세금계산서 발행 요청';}
-                    return E('span',{className:'badge '+cls,style:{fontSize:10,cursor:onClk?'pointer':'default'},onClick:onClk,title},label);
+                    const s=invSummary(o);
+                    if(s.cls==='none')return E('span',{style:{color:'#94a3b8',fontSize:11}},'—');
+                    return E('span',{className:'badge '+s.cls,style:{fontSize:10}},s.label);
                     })()
                   ),
                   E('td',{onClick:e=>e.stopPropagation(),style:{padding:'4px 6px'}},
@@ -1190,7 +1218,7 @@ function App(){
       )
     ),
     E("div",{className:"main"},
-      tab==="dashboard"&&E(Dashboard,{orders}),
+      tab==="dashboard"&&E(Dashboard,{orders,saveOrders:saveO}),
       tab==="clients"&&E(ClientList,{clients,saveClients:saveCl,orders,saveOrders:saveO}),
       tab==="orders"&&E(OrderList,{orders,saveOrders:saveO,managers:mgrs,clients}),
       tab==="cashflow"&&E(CashFlow,{orders,cfData,saveCf,cfPassword,savePw,onLock:()=>{setCfUnlocked(false);setTab("dashboard");}})
