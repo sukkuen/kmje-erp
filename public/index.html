@@ -36,6 +36,7 @@ tbody tr:last-child td{border-bottom:none;}
 .b-blue{background:#dbeafe;color:#1d4ed8;}
 .b-green{background:#dcfce7;color:#166534;}
 .b-amber{background:#fef3c7;color:#92400e;}
+.b-yellow{background:#fef08a;color:#854d0e;}
 .b-red{background:#fee2e2;color:#991b1b;}
 .btn{background:transparent;border:1px solid #e2e8f0;border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;color:#374151;font-family:inherit;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-weight:500;}
 .btn:hover{background:#f8fafc;}
@@ -656,14 +657,18 @@ function OrderList({orders,saveOrders,managers,clients}){
                   E('td',{className:'mono',style:{textAlign:'right',color:o.currency==='USD'?'#059669':'inherit'}},o.projectAmount?fmtCur(o.projectAmount,o.currency):'—'),
                   E('td',{className:'mono',style:{textAlign:'right',fontWeight:b>0?600:400,color:b>0?'#d97706':'#94a3b8'}},b>0?fmtCur(b,o.currency):'—'),
                   E('td',null,E('span',{className:`badge ${sc}`},sl)),
-                  E('td',{style:{textAlign:'center'}},
+                  E('td',{style:{textAlign:'center'},onClick:e=>e.stopPropagation()},
                     (()=>{
                     if(!o.payments||o.payments.length===0)return E('span',{style:{color:'#94a3b8',fontSize:11}},'—');
                     const total=o.payments.length;
                     const issued=o.payments.filter(p=>p.invoiceDate).length;
-                    const label=issued===0?'미발행':issued===total?'전체발행':issued+'/'+total;
-                    const cls=issued===0?'b-gray':issued===total?'b-green':'b-amber';
-                    return E('span',{className:'badge '+cls,style:{fontSize:10}},label);
+                    const req=!!o.invoiceRequested;
+                    let label,cls,onClk=null,title='';
+                    if(issued===total){label='전체발행';cls='b-green';}
+                    else if(issued>0){label=issued+'/'+total;cls='b-amber';}
+                    else if(req){label='요청됨';cls='b-yellow';onClk=()=>upd({...o,invoiceRequested:false});title='클릭: 발행요청 취소';}
+                    else{label='미발행';cls='b-gray';onClk=()=>upd({...o,invoiceRequested:true});title='클릭: 세금계산서 발행 요청';}
+                    return E('span',{className:'badge '+cls,style:{fontSize:10,cursor:onClk?'pointer':'default'},onClick:onClk,title},label);
                     })()
                   ),
                   E('td',{onClick:e=>e.stopPropagation(),style:{padding:'4px 6px'}},
