@@ -155,6 +155,20 @@ const invSummary = o => {
   return {label:'미발행', cls:'b-gray'};
 };
 const sUnpaid = s => (s.contractAmount||0) - s.payments.filter(p=>p.paidDate).reduce((s2,p)=>s2+(p.amount||0),0);
+// SheetJS(xlsx) 지연 로드 — 엑셀 내보내기 클릭 시 최초 1회만 CDN에서 로드
+let _xlsxPromise=null;
+const loadXLSX=()=>{
+  if(window.XLSX)return Promise.resolve(window.XLSX);
+  if(_xlsxPromise)return _xlsxPromise;
+  _xlsxPromise=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>resolve(window.XLSX);
+    s.onerror=()=>reject(new Error('엑셀 라이브러리 로드 실패 (인터넷 연결 확인)'));
+    document.head.appendChild(s);
+  });
+  return _xlsxPromise;
+};
 
 const INIT = [
   {id:"o01",no:1,orderNo:"2617-001",orderType:"구두발주",clientName:"에스케이케미칼",description:"S.P.D 250A LEAK Valve 구매, 납품 외",manager:"김경래",startDate:"2026-01-12",endDate:"2026-01-13",projectAmount:2000000,note:"",payments:[mkP("잔금",2000000)],subcontractors:[]},
@@ -633,6 +647,28 @@ function OrderList({orders,saveOrders,managers,clients}){
     else saveOrders([...orders,{...o,id:uid(),no:orders.length+1}]);
     setModal(null);
   };
+  const exportExcel=async()=>{
+    if(!filtered.length){alert('내보낼 수주가 없습니다.');return;}
+    try{
+      const XLSX=await loadXLSX();
+      const rows=filtered.map(o=>{
+        const recv=(o.payments||[]).filter(p=>p.receivedDate).reduce((s,p)=>s+(p.amount||0),0);
+        const bal=oBalance(o);const inv=invSummary(o);
+        return {
+          'No':o.no||'','수주번호':o.orderNo||'','거래처':o.clientName||'','수행내용':o.description||'',
+          '담당':o.manager||'','시작일':o.startDate||'','완료예정':o.endDate||'','통화':o.currency||'KRW',
+          '수주금액':o.projectAmount||0,'입금액':recv,'미수금':bal>0?bal:0,
+          '상태':getSt(o)[0],'계산서':inv.cls==='none'?'':inv.label,'비고':o.note||''
+        };
+      });
+      const ws=XLSX.utils.json_to_sheet(rows);
+      ws['!cols']=[{wch:5},{wch:12},{wch:18},{wch:32},{wch:8},{wch:12},{wch:12},{wch:6},{wch:16},{wch:16},{wch:16},{wch:8},{wch:10},{wch:20}];
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,year+'년 수주현황');
+      const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+      XLSX.writeFile(wb,'수주현황_'+year+'_'+today+'.xlsx');
+    }catch(err){alert('엑셀 내보내기 실패: '+err.message);}
+  };
   const STATUS_OPTS=['전체','미수','진행중','완료','금액미정'];
   const yearTotal=yearOrders.reduce((s,o)=>s+(o.projectAmount||0),0);
   return E(Fragment,null,
@@ -659,7 +695,10 @@ function OrderList({orders,saveOrders,managers,clients}){
           ),
           E('span',{style:{fontSize:11,color:'#64748b'}},filtered.length+'건')
         ),
-        E('button',{className:'btn pri',onClick:()=>setModal('new')},'+ 수주 추가')
+        E('div',{style:{display:'flex',gap:8}},
+          E('button',{className:'btn sm',onClick:exportExcel},'📊 엑셀 내보내기'),
+          E('button',{className:'btn pri',onClick:()=>setModal('new')},'+ 수주 추가')
+        )
       ),
       E('div',{className:'card'},
         E('div',{style:{overflowX:'auto'}},
