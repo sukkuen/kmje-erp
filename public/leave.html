@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>㈜케이엠제이 연차관리</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:#f0f2f5;color:#1e293b;font-size:14px;}
+.hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 20px;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.hdr-inner{display:flex;align-items:center;max-width:1200px;margin:0 auto;}
+.logo{font-size:15px;font-weight:700;color:#1e40af;padding:8px 16px 8px 0;border-right:1px solid #e2e8f0;margin-right:4px;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;}
+.logo img{height:28px;width:auto;display:block;}
+.tab{padding:12px 14px;border:none;background:transparent;cursor:pointer;font-size:13px;font-family:inherit;color:#64748b;border-bottom:2px solid transparent;display:flex;align-items:center;gap:5px;font-weight:400;}
+.tab.on{color:#1e293b;font-weight:500;border-bottom:2px solid #1e40af;}
+.sync-badge{margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;}
+.sync-live{background:#dcfce7;color:#166534;}
+.sync-local{background:#fef9c3;color:#854d0e;}
+.main{max-width:1200px;margin:0 auto;padding:20px;}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.kpi{background:#fff;border-radius:10px;padding:16px 18px;border:1px solid #e2e8f0;}
+.kpi-lbl{font-size:11px;color:#64748b;margin-bottom:8px;}
+.kpi-val{font-size:22px;font-weight:700;margin-bottom:2px;}
+.kpi-sub{font-size:11px;color:#94a3b8;}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.card-hdr{padding:13px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;}
+.card-bd{padding:16px;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:11px;font-weight:600;color:#64748b;text-align:left;padding:8px 12px;border-bottom:1px solid #f1f5f9;background:#f8fafc;white-space:nowrap;}
+td{font-size:12px;padding:9px 12px;border-bottom:1px solid #f8fafc;vertical-align:middle;}
+tbody tr:hover td{background:#f8fafc;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
+.b-gray{background:#f1f5f9;color:#475569;}.b-blue{background:#dbeafe;color:#1d4ed8;}
+.b-green{background:#dcfce7;color:#166534;}.b-amber{background:#fef3c7;color:#92400e;}
+.b-red{background:#fee2e2;color:#991b1b;}
+.btn{background:transparent;border:1px solid #e2e8f0;border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;color:#374151;font-family:inherit;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-weight:500;}
+.btn:hover{background:#f8fafc;}
+.btn.pri{background:#1e40af;color:#fff;border-color:#1e40af;}.btn.pri:hover{background:#1d3a9f;}
+.btn.sm{padding:3px 9px;font-size:11px;}
+.btn.grn{background:#16a34a;color:#fff;border-color:#16a34a;}
+.btn.dng{color:#dc2626;border-color:transparent;}.btn.dng:hover{background:#fee2e2;}
+.inp{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 9px;color:#1e293b;font-size:12px;outline:none;font-family:inherit;width:100%;}
+.inp:focus{border-color:#1e40af;background:#fff;}
+.lbl{font-size:11px;color:#64748b;margin-bottom:4px;display:block;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.seg{display:inline-flex;border:1px solid #e2e8f0;border-radius:7px;overflow:hidden;}
+.seg button{border:0;background:#fff;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit;color:#64748b;}
+.seg button.on{background:#1e40af;color:#fff;}
+.flow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:12px;color:#1d4ed8;}
+.flow .n{width:18px;height:18px;border-radius:50%;background:#dbeafe;color:#1d4ed8;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-right:5px;}
+.note-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:14px;}
+.login-screen{display:flex;align-items:center;justify-content:center;min-height:90vh;}
+.login-box{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:32px;max-width:360px;width:100%;text-align:center;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#e2e8f0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;}
+.cal-wd{background:#f8fafc;text-align:center;font-size:11px;font-weight:600;padding:8px 0;}
+.cal-cell{background:#fff;min-height:96px;padding:5px 6px;display:flex;flex-direction:column;gap:3px;}
+.cal-cell.empty{background:#fafbfc;}
+.cal-cell.today{box-shadow:inset 0 0 0 2px #1e40af;}
+.cal-day{font-size:11px;font-weight:600;color:#475569;}
+.cal-cell.hol{background:#fff5f5;}
+.cal-hol{font-size:9px;color:#dc2626;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-chip{font-size:10px;line-height:1.5;padding:1px 6px;border-radius:5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+@media(max-width:640px){.cal-cell{min-height:60px;padding:3px;}.cal-chip{font-size:9px;padding:1px 3px;}.cal-day{font-size:10px;}}
+.print-only{display:none;}
+@media print{
+  body *{visibility:hidden;}
+  #print-area,#print-area *{visibility:visible;}
+  #print-area{position:absolute;left:0;top:0;width:100%;}
+  .no-print{display:none!important;}
+  .print-only{display:block!important;}
+}
+</style>
+</head>
+<body>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#64748b;">로딩 중...</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+<script>
+// ╔══════════════════════════════════════════════════════╗
+// ║  Firebase 설정 (수주관리와 동일 프로젝트 공유)         ║
+// ╚══════════════════════════════════════════════════════╝
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBpvilKI1QaAKrcXac6SpQCGVRM5JbEbQo",
+  authDomain: "kmje-order-status.firebaseapp.com",
+  projectId: "kmje-order-status",
+  storageBucket: "kmje-order-status.firebasestorage.app",
+  messagingSenderId: "811826287812",
+  appId: "1:811826287812:web:aba2bd37abd0420fcb6591"
+};
+const FB_OK = FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId;
+let db = null;
+if (FB_OK) { try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e){ console.error('Firebase 초기화 실패', e); } }
+
+// 연차 데이터는 같은 kmje 컬렉션에 별도 키(leave_*)로 저장 → 수주관리와 안 섞임
+async function dbGet(k){
+  if(db){ try{ const d=await db.collection('kmje').doc(k).get(); return d.exists?JSON.parse(d.data().v):null; }catch{ return null; } }
+  try{ const v=localStorage.getItem('kmje_'+k); return v?JSON.parse(v):null; }catch{ return null; }
+}
+async function dbSet(k,val){
+  if(db){ try{ await db.collection('kmje').doc(k).set({v:JSON.stringify(val)}); }catch(e){ console.error(e); } }
+  else { localStorage.setItem('kmje_'+k, JSON.stringify(val)); }
+}
+function dbListen(k,cb){
+  if(db) return db.collection('kmje').doc(k).onSnapshot(d=>{ if(d.exists) cb(JSON.parse(d.data().v)); });
+  return null;
+}
+
+const {useState,useEffect} = React;
+const E = React.createElement;
+const uid = () => Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);
+const today = () => new Date().toISOString().slice(0,10);
+const HPD = 8; // 1일 = 8시간
+const ADMIN_PW = "1234";   // 관리자 비밀번호 (배포 전 변경 권장)
+const SHARED_PW = "kmje";  // 회사 공용 접속 비밀번호 (배포 전 변경 권장)
+const HR_PW = "kmje1234";  // 인사기록부 전용 비밀번호 (관리자 안의 2차 관문)
+
+const NOTES = [
+  "본 연차 부여 기준은 「근로기준법」 제60조(2018. 5. 29. 시행 기준)에 의거한다. 입사 1년 미만은 1개월 개근 시 1일(최대 11일), 1년 이상은 15일, 3년 이상은 매 2년마다 1일 가산하여 최대 25일을 부여한다.",
+  "연차는 신청서 생성 → 프린트 → 종이 결재 → 관리자 승인 절차가 모두 완료되어야 승인·차감된다.",
+  "근태신청서는 신청하고자 하는 날의 전일 최종근무시간 3시간 이전에는 신청하여야 한다.",
+  "소속장의 사전승인이 필요하며, 불가항력적인 경우는 예외로 한다.",
+  "신청 후 사용 계획이 변경된 경우 지체 없이 취소·정정 신청을 하여야 한다."
+];
+
+// ── 연차 계산 (누적·이월 방식) ──
+function monthsBetween(a,b){ let m=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth()); if(b.getDate()<a.getDate()) m--; return m; }
+function grantAt(y){ return Math.min(25,15+Math.floor((y-1)/2)); } // 만근속 y년차(y>=1) 부여: 15→15→16…최대25
+// 자동 보유연차: 입사 이후 누적 부여 (1년 미만은 월차 누적 최대11, 1주년 도달 시 11개 소멸 후 15부터 매년 누적)
+function autoHold(hire){
+  const h=new Date(hire), now=new Date();
+  const months=monthsBetween(h,now), y=Math.floor(months/12);
+  if(y<1) return Math.min(11,Math.max(0,months));
+  let sum=0; for(let k=1;k<=y;k++) sum+=grantAt(k);
+  return sum;
+}
+function calcEntitle(hire){
+  const h=new Date(hire), now=new Date();
+  const months=monthsBetween(h,now), years=Math.floor(months/12);
+  return {years, months};
+}
+function balance(emp, leaves){
+  const ent=calcEntitle(emp.hire);
+  // 보유연차: 관리자 직접수정(holdOverride)이 있으면 그 값, 없으면 자동 누적
+  const auto=autoHold(emp.hire);
+  const hasOverride = emp.holdOverride!==undefined && emp.holdOverride!==null && emp.holdOverride!=='';
+  const total = hasOverride ? Number(emp.holdOverride) : auto;
+  // 누적 사용: 입사 이후 전체 승인분 합 (날짜형 + 일수형 모두, 연도 무관)
+  const used = Math.round(leaves.filter(l=>l.emp===emp.id&&l.status==='approved').reduce((s,l)=>s+l.days,0)*10)/10;
+  // 중간정산(돈으로 정산/퇴사정리 차감)
+  const settle = Number(emp.settle)||0;
+  const remain = Math.round((total-used-settle)*10)/10;
+  const pending = Math.round(leaves.filter(l=>l.emp===emp.id&&l.status==='pending').reduce((s,l)=>s+l.days,0)*10)/10;
+  return {total, auto, hasOverride, used, settle, remain, pending, years:ent.years, months:ent.months};
+}
+const yLabel = b => b.months<12 ? b.months+'개월' : b.years+'년';
+// 일수(소수) → '26일 4h' 표기 (1일=8시간)
+function fmtDays(d){
+  if(d===null||d===undefined||isNaN(d)) return '-';
+  const neg=d<0; let v=Math.abs(d);
+  let days=Math.floor(v);
+  let frac=Math.round((v-days)*HPD); // 정수 시간으로 반올림(소수점 제거)
+  if(frac>=HPD){ days+=Math.floor(frac/HPD); frac=frac%HPD; }
+  let s;
+  if(frac===0) s=days+'일';
+  else if(days===0) s=frac+'h';
+  else s=days+'일 '+frac+'h';
+  return (neg?'-':'')+s;
+}
+// 연차 종류 한글 표기
+function typeLabel(l){
+  if(l.daysOnly) return '일수입력';
+  if(l.type==='hour') return '시간연차';
+  if(l.type==='month') return '월차';
+  return '연차';
+}
+const daysBetween=(a,b)=>Math.round((new Date(b)-new Date(a))/86400000)+1;
+// 'HH:MM'~'HH:MM' → 시간 수(정수, 시간 단위). 마치는 시각이 더 빠르면 0.
+function hoursBetween(s,e){
+  if(!s||!e) return 0;
+  const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
+  const mins=(eh*60+em)-(sh*60+sm);
+  return mins>0?Math.round(mins/60*100)/100:0;
+}
+// 시각 선택용 정시 목록 (06:00 ~ 22:00, 분 단위 없음)
+const HOUR_OPTS=(()=>{const a=[];for(let h=6;h<=22;h++)a.push((h<10?'0'+h:h)+':00');return a;})();
+
+// 초기 시드 (Firebase에 데이터 없을 때만 사용)
+const SEED_EMP = [
+  {id:"e1",name:"김영수",hire:"2018-03-02",dept:"설계팀",position:"부장"},
+  {id:"e2",name:"이정민",hire:"2021-07-15",dept:"설계팀",position:"과장"},
+  {id:"e3",name:"박서연",hire:"2023-01-09",dept:"관리팀",position:"대리"}
+];
+
+function App(){
+  const [live,setLive]=useState(false);
+  const [authed,setAuthed]=useState(false);
+  const [pw,setPw]=useState("");
+  const [pwErr,setPwErr]=useState("");
+  const [tab,setTab]=useState("apply");
+  const [emps,setEmps]=useState([]);
+  const [leaves,setLeaves]=useState([]);
+  const [loaded,setLoaded]=useState(false);
+
+  // 데이터 로드 + 실시간 구독 (수주관리와 동일 패턴)
+  useEffect(()=>{
+    let unsubE,unsubL;
+    (async()=>{
+      let e=await dbGet('leave_employees');
+      let l=await dbGet('leave_records');
+      if(!e){ e=SEED_EMP; await dbSet('leave_employees',e); }
+      if(!l){ l=[]; await dbSet('leave_records',l); }
+      setEmps(e); setLeaves(l); setLoaded(true);
+      setLive(!!db);
+      unsubE=dbListen('leave_employees',v=>setEmps(v||[]));
+      unsubL=dbListen('leave_records',v=>setLeaves(v||[]));
+    })();
+    return ()=>{ unsubE&&unsubE(); unsubL&&unsubL(); };
+  },[]);
+
+  const saveEmps=async(next)=>{ setEmps(next); await dbSet('leave_employees',next); };
+  const saveLeaves=async(next)=>{ setLeaves(next); await dbSet('leave_records',next); };
+
+  if(!loaded) return E('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'#64748b'}},'데이터 불러오는 중...');
+
+  // 공용 비밀번호 게이트
+  if(!authed){
+    return E('div',{className:'login-screen'},
+      E('div',{className:'login-box'},
+        E('div',{style:{fontSize:18,fontWeight:700,color:'#1e40af',marginBottom:6}},'㈜케이엠제이 연차관리'),
+        E('div',{style:{fontSize:12,color:'#94a3b8',marginBottom:20}},'사내 공용 비밀번호를 입력하세요'),
+        E('input',{type:'password',className:'inp',placeholder:'비밀번호',value:pw,style:{marginBottom:10},
+          onChange:e=>setPw(e.target.value),onKeyDown:e=>{if(e.key==='Enter')doLogin();}}),
+        E('button',{className:'btn pri',style:{width:'100%'},onClick:doLogin},'입장'),
+        pwErr&&E('div',{style:{color:'#dc2626',fontSize:12,marginTop:10}},pwErr)
+      ));
+  }
+  function doLogin(){ if(pw===SHARED_PW){ setAuthed(true); setPwErr(""); } else setPwErr("비밀번호가 올바르지 않습니다."); }
+
+  return E(React.Fragment,null,
+    E('div',{className:'hdr'},
+      E('div',{className:'hdr-inner'},
+        E('div',{className:'logo'},E('img',{src:'logo.png',alt:'KMJE',onError:e=>e.target.style.display='none'}),'케이엠제이 연차관리'),
+        E('button',{className:'tab'+(tab==='apply'?' on':''),onClick:()=>setTab('apply')},'📅 연차 신청'),
+        E('button',{className:'tab'+(tab==='dash'?' on':''),onClick:()=>setTab('dash')},'📊 대시보드'),
+        E('button',{className:'tab'+(tab==='admin'?' on':''),onClick:()=>setTab('admin')},'🔒 관리자'),
+        E('span',{className:'sync-badge '+(live?'sync-live':'sync-local')},live?'● 실시간 공유':'● 로컬 저장')
+      )),
+    E('div',{className:'main'},
+      tab==='apply'&&E(ApplyTab,{emps,leaves,saveLeaves}),
+      tab==='dash'&&E(DashTab,{emps,leaves}),
+      tab==='admin'&&E(AdminTab,{emps,leaves,saveEmps,saveLeaves})
+    )
+  );
+}
+
+// ── 연차 신청 탭 ──
+function ApplyTab({emps,leaves,saveLeaves}){
+  const [empId,setEmpId]=useState("");
+  const [type,setType]=useState("day");
+  const [start,setStart]=useState("");
+  const [end,setEnd]=useState("");
+  const [stime,setStime]=useState("09:00");
+  const [etime,setEtime]=useState("10:00");
+  const [contact,setContact]=useState("");
+  const [applyDate,setApplyDate]=useState("");
+  const [handover,setHandover]=useState("");
+  const [pendingWork,setPendingWork]=useState("");
+  const [reason,setReason]=useState("");
+  const [msg,setMsg]=useState(null);
+  const [printRec,setPrintRec]=useState(null);
+
+  const emp=emps.find(e=>e.id===empId);
+  const bal=emp?balance(emp,leaves):null;
+
+  async function submit(){
+    if(!empId||!start){ setMsg({t:'이름과 시작일을 입력하세요.',c:'#dc2626'}); return; }
+    let rec;
+    if(type==='hour'){
+      const hc=hoursBetween(stime,etime);
+      if(hc<=0){ setMsg({t:'마치는 시각이 시작 시각보다 늦어야 합니다.',c:'#dc2626'}); return; }
+      rec={lid:uid(),emp:empId,start,end:start,type:'hour',stime,etime,hours:hc,days:Math.round(hc/HPD*100)/100,reason:reason||'개인 사유',status:'pending'};
+    } else {
+      const ed=end||start;
+      rec={lid:uid(),emp:empId,start,end:ed,type:type,days:daysBetween(start,ed),reason:reason||'개인 사유',status:'pending'};
+    }
+    await saveLeaves([...leaves,rec]);
+    const nb=balance(emp,[...leaves,rec]);
+    setMsg({t:'신청서 생성 완료 — 결재 대기 상태입니다. 프린트 후 결재를 받으세요. 승인 시 잔여 예상: '+fmtDays(bal.remain-rec.days),c:'#854d0e'});
+    setPrintRec({rec,emp,contact,applyDate:applyDate||today(),handover,pendingWork,bal});
+  }
+  function doPrint(){ if(!printRec){ setMsg({t:'먼저 신청서를 생성하세요.',c:'#dc2626'}); return; } window.print(); }
+
+  return E(React.Fragment,null,
+    E('div',{className:'note-box no-print'},
+      E('div',{style:{fontSize:12,fontWeight:700,color:'#1d4ed8',marginBottom:8}},'연차 승인 절차'),
+      E('div',{className:'flow'},
+        E('span',null,E('span',{className:'n'},'1'),'신청서 생성'),E('span',null,'→'),
+        E('span',null,E('span',{className:'n'},'2'),'프린트'),E('span',null,'→'),
+        E('span',null,E('span',{className:'n'},'3'),'종이 결재'),E('span',null,'→'),
+        E('span',null,E('span',{className:'n'},'4'),'관리자 승인')),
+      E('div',{style:{fontSize:11,color:'#3b6fd4',marginTop:8}},'위 4단계가 모두 끝나야 연차가 승인·차감됩니다. 신청서 생성·프린트만으로는 승인되지 않습니다.')
+    ),
+    E('div',{className:'card no-print'},
+      E('div',{className:'card-hdr'},'연차 신청서 작성'),
+      E('div',{className:'card-bd'},
+        E('div',{className:'grid3',style:{marginBottom:12}},
+          E('div',null,E('span',{className:'lbl'},'이름'),
+            E('select',{className:'inp',value:empId,onChange:e=>setEmpId(e.target.value)},
+              E('option',{value:''},'직원 선택'),
+              emps.map(e=>E('option',{key:e.id,value:e.id},e.name)))),
+          E('div',null,E('span',{className:'lbl'},'부서'),E('input',{className:'inp',value:emp?emp.dept:'',readOnly:true})),
+          E('div',null,E('span',{className:'lbl'},'직위'),E('input',{className:'inp',value:emp?emp.position:'',readOnly:true}))
+        ),
+        bal&&E('div',{className:'kpis',style:{gridTemplateColumns:'repeat(4,1fr)',marginBottom:12}},
+          E('div',{className:'kpi'},E('div',{className:'kpi-lbl'},'근속'),E('div',{className:'kpi-val',style:{fontSize:18}},yLabel(bal))),
+          E('div',{className:'kpi'},E('div',{className:'kpi-lbl'},'보유 연차'),E('div',{className:'kpi-val',style:{fontSize:18}},fmtDays(bal.total))),
+          E('div',{className:'kpi'},E('div',{className:'kpi-lbl'},'확정 잔여'),E('div',{className:'kpi-val',style:{fontSize:18,color:bal.remain<0?'#dc2626':'#1e40af'}},fmtDays(bal.remain))),
+          E('div',{className:'kpi'},E('div',{className:'kpi-lbl'},'대기 중'),E('div',{className:'kpi-val',style:{fontSize:18,color:'#92400e'}},fmtDays(bal.pending)))
+        ),
+        E('div',{className:'grid2',style:{marginBottom:12}},
+          E('div',null,E('span',{className:'lbl'},'연락처'),E('input',{className:'inp',value:contact,onChange:e=>setContact(e.target.value),placeholder:'010-0000-0000'})),
+          E('div',null,E('span',{className:'lbl'},'작성일'),E('input',{type:'date',className:'inp',value:applyDate,onChange:e=>setApplyDate(e.target.value)}))
+        ),
+        E('div',{style:{display:'flex',gap:12,marginBottom:12,flexWrap:'wrap',alignItems:'flex-end'}},
+          E('div',{style:{minWidth:120}},E('span',{className:'lbl'},'종류'),
+            E('select',{className:'inp',value:type,onChange:e=>setType(e.target.value)},
+              E('option',{value:'day'},'연차(일)'),E('option',{value:'month'},'월차(일)'),E('option',{value:'hour'},'시간(시간)'))),
+          E('div',{style:{flex:1,minWidth:130}},E('span',{className:'lbl'},'시작일'),E('input',{type:'date',className:'inp',value:start,onChange:e=>setStart(e.target.value)})),
+          type!=='hour'
+            ? E('div',{style:{flex:1,minWidth:130}},E('span',{className:'lbl'},'종료일'),E('input',{type:'date',className:'inp',value:end,onChange:e=>setEnd(e.target.value)}))
+            : E(React.Fragment,null,
+                E('div',{style:{flex:1,minWidth:110}},E('span',{className:'lbl'},'시작 시각'),E('select',{className:'inp',value:stime,onChange:e=>setStime(e.target.value)},HOUR_OPTS.map(t=>E('option',{key:t,value:t},t)))),
+                E('div',{style:{flex:1,minWidth:110}},E('span',{className:'lbl'},'마치는 시각'),E('select',{className:'inp',value:etime,onChange:e=>setEtime(e.target.value)},HOUR_OPTS.map(t=>E('option',{key:t,value:t},t)))),
+                E('div',{style:{minWidth:80}},E('span',{className:'lbl'},'시간 수'),E('input',{className:'inp',readOnly:true,style:{background:'#f1f5f9',textAlign:'center'},value:hoursBetween(stime,etime)>0?hoursBetween(stime,etime)+'시간':'-'})))
+        ),
+        E('div',{className:'grid2',style:{marginBottom:12}},
+          E('div',null,E('span',{className:'lbl'},'업무 인수자'),E('input',{className:'inp',value:handover,onChange:e=>setHandover(e.target.value)})),
+          E('div',null,E('span',{className:'lbl'},'미결 업무'),E('input',{className:'inp',value:pendingWork,onChange:e=>setPendingWork(e.target.value)}))
+        ),
+        E('div',{style:{marginBottom:12}},E('span',{className:'lbl'},'사유'),E('input',{className:'inp',value:reason,onChange:e=>setReason(e.target.value),placeholder:'개인 사유'})),
+        E('div',{style:{display:'flex',gap:10}},
+          E('button',{className:'btn pri',style:{flex:1},onClick:submit},'📄 신청서 생성'),
+          E('button',{className:'btn',style:{flex:1},onClick:doPrint},'🖨️ 프린트')),
+        msg&&E('div',{style:{fontSize:12,marginTop:10,textAlign:'center',color:msg.c}},msg.t)
+      )
+    ),
+    printRec&&E(PrintSheet,printRec)
+  );
+}
+
+// ── 프린트 신청서 ──
+function PrintSheet({rec,emp,contact,applyDate,handover,pendingWork,bal}){
+  const period=rec.type==='hour'?rec.start+' '+(rec.stime&&rec.etime?rec.stime+' ~ '+rec.etime+' ':'')+'('+rec.hours+'시간)':(rec.start===rec.end?rec.start:rec.start+' ~ '+rec.end);
+  const th={border:'0.5px solid #888',background:'#f1efe8',padding:'8px 10px',textAlign:'center',color:'#444',width:'18%'};
+  const td={border:'0.5px solid #888',padding:'8px 10px',width:'32%'};
+  const bth={border:'0.5px solid #888',background:'#e6f1fb',padding:'8px 10px',textAlign:'center',color:'#0c447c',width:'25%'};
+  const btd={border:'0.5px solid #888',padding:'8px 10px',textAlign:'center',width:'25%'};
+  const row=(a,b,c,d)=>E('tr',null,E('th',{style:th},a),E('td',{style:td},b),E('th',{style:th},c),E('td',{style:td},d));
+  return E('div',{id:'print-area',className:'card',style:{padding:'2rem',marginTop:14}},
+    E('div',{style:{textAlign:'center',fontSize:28,fontWeight:700,letterSpacing:10,marginBottom:24}},'연 차 신 청 서'),
+    E('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:16}},
+      E('table',{style:{borderCollapse:'collapse',fontSize:15,tableLayout:'fixed'}},
+        E('tbody',null,
+          E('tr',null,
+            E('td',{rowSpan:2,style:{border:'0.5px solid #888',padding:'8px 14px',textAlign:'center',fontSize:20,fontWeight:700,color:'#222',whiteSpace:'nowrap',letterSpacing:2}},'결 재'),
+            E('td',{style:{border:'0.5px solid #888',padding:'6px 0',textAlign:'center',fontSize:15,fontWeight:700,color:'#222',width:85,whiteSpace:'nowrap'}},'팀장'),
+            E('td',{style:{border:'0.5px solid #888',padding:'6px 0',textAlign:'center',fontSize:15,fontWeight:700,color:'#222',width:85,whiteSpace:'nowrap'}},'부사장'),
+            E('td',{style:{border:'0.5px solid #888',padding:'6px 0',textAlign:'center',fontSize:15,fontWeight:700,color:'#222',width:85,whiteSpace:'nowrap'}},'대표')),
+          E('tr',null,
+            E('td',{style:{border:'0.5px solid #888',height:52,width:85}}),
+            E('td',{style:{border:'0.5px solid #888',height:52,width:85}}),
+            E('td',{style:{border:'0.5px solid #888',height:52,width:85}}))
+        ))),
+    E('table',{style:{width:'100%',borderCollapse:'collapse',fontSize:13}},
+      E('tbody',null,
+        row('성명',emp.name,'부서',emp.dept),
+        row('직위',emp.position,'연락처',contact),
+        row('연차 종류',typeLabel(rec),'사용 기간',period),
+        row('업무 인수자',handover,'신청일',applyDate),
+        E('tr',null,E('th',{style:th},'미결 업무'),E('td',{style:{border:'0.5px solid #888',padding:'8px 10px'},colSpan:3},pendingWork)),
+        E('tr',null,E('th',{style:th},'사유'),E('td',{style:{border:'0.5px solid #888',padding:'8px 10px'},colSpan:3},rec.reason))
+      )),
+    E('table',{style:{width:'100%',borderCollapse:'collapse',fontSize:13,marginTop:14}},
+      E('tbody',null,E('tr',null,
+        E('th',{style:bth},'근속연수'),E('td',{style:btd},yLabel(bal)),
+        E('th',{style:bth},'현재 잔여'),E('td',{style:{...btd,color:bal.remain<0?'#a32d2d':'#185fa5',fontWeight:500}},fmtDays(bal.remain))
+      ))),
+    E('div',{style:{marginTop:16,fontSize:12,color:'#444'}},
+      E('div',{style:{fontWeight:500,marginBottom:6}},'※ 주의사항'),
+      E('div',{style:{lineHeight:1.9}},NOTES.map((n,i)=>E('div',{key:i},(i+1)+'. '+n)))),
+    E('div',{style:{textAlign:'center',marginTop:32,fontSize:13,color:'#444'}},
+      '위와 같이 연차 사용을 신청합니다.',E('br'),E('br'),applyDate,E('br'),E('br'),'신청인 : '+emp.name+' (인)')
+  );
+}
+
+// ── 대시보드 탭 (월간 캘린더) ──
+const CAL_PAL=[
+  {bg:'#dbeafe',fg:'#1d4ed8'},{bg:'#dcfce7',fg:'#166534'},{bg:'#fef3c7',fg:'#92400e'},
+  {bg:'#fce7f3',fg:'#9d174d'},{bg:'#e0e7ff',fg:'#3730a3'},{bg:'#ffedd5',fg:'#9a3412'},
+  {bg:'#ccfbf1',fg:'#115e59'},{bg:'#ede9fe',fg:'#5b21b6'}
+];
+const WD=['일','월','화','수','목','금','토'];
+// 대한민국 공휴일(빨간날) — 정부 확정 기준(음력·대체공휴일·2026 제헌절 부활·2026 지방선거일 포함).
+// 해가 바뀌면 이 표에 연도만 추가하면 됩니다.
+const HOLIDAYS={
+  // 2025
+  '2025-01-01':'신정','2025-01-28':'설날','2025-01-29':'설날','2025-01-30':'설날',
+  '2025-03-01':'삼일절','2025-03-03':'대체공휴일','2025-05-01':'근로자의날',
+  '2025-05-05':'어린이날·부처님오신날','2025-05-06':'대체공휴일','2025-06-06':'현충일',
+  '2025-08-15':'광복절','2025-10-03':'개천절','2025-10-06':'추석','2025-10-07':'추석',
+  '2025-10-08':'대체공휴일','2025-10-09':'한글날','2025-12-25':'성탄절',
+  // 2026
+  '2026-01-01':'신정','2026-02-16':'설날','2026-02-17':'설날','2026-02-18':'설날',
+  '2026-03-01':'삼일절','2026-03-02':'대체공휴일','2026-05-01':'근로자의날','2026-05-05':'어린이날',
+  '2026-05-24':'부처님오신날','2026-05-25':'대체공휴일','2026-06-03':'지방선거일','2026-06-06':'현충일',
+  '2026-07-17':'제헌절','2026-08-15':'광복절','2026-08-17':'대체공휴일',
+  '2026-09-24':'추석','2026-09-25':'추석','2026-09-26':'추석',
+  '2026-10-03':'개천절','2026-10-05':'대체공휴일','2026-10-09':'한글날','2026-12-25':'성탄절',
+  // 2027
+  '2027-01-01':'신정','2027-02-06':'설날','2027-02-07':'설날','2027-02-08':'설날','2027-02-09':'대체공휴일',
+  '2027-03-01':'삼일절','2027-05-01':'근로자의날','2027-05-05':'어린이날','2027-05-13':'부처님오신날',
+  '2027-06-06':'현충일','2027-07-17':'제헌절','2027-08-15':'광복절','2027-08-16':'대체공휴일',
+  '2027-09-14':'추석','2027-09-15':'추석','2027-09-16':'추석',
+  '2027-10-03':'개천절','2027-10-04':'대체공휴일','2027-10-09':'한글날','2027-10-11':'대체공휴일',
+  '2027-12-25':'성탄절','2027-12-27':'대체공휴일'
+};
+function DashTab({emps,leaves}){
+  const [cur,setCur]=useState(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1);});
+  const shift=n=>setCur(new Date(cur.getFullYear(),cur.getMonth()+n,1));
+  const y=cur.getFullYear(), m=cur.getMonth();
+  const pad=n=>String(n).padStart(2,'0');
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const startWd=new Date(y,m,1).getDay();
+  const now=new Date(), todayStr=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+  const appr=leaves.filter(l=>l.status==='approved'&&!l.daysOnly&&l.start);
+  const colorOf=id=>{const i=emps.findIndex(e=>e.id===id);return CAL_PAL[(i<0?0:i)%CAL_PAL.length];};
+  const monthCount=appr.filter(l=>{const s=l.start,e=l.end||l.start;const a=y+'-'+pad(m+1)+'-01',b=y+'-'+pad(m+1)+'-'+pad(daysInMonth);return s<=b&&e>=a;}).length;
+  // 셀 구성 (앞 빈칸 + 날짜 + 뒤 빈칸)
+  const cells=[];
+  for(let i=0;i<startWd;i++) cells.push(null);
+  for(let d=1;d<=daysInMonth;d++) cells.push(d);
+  while(cells.length%7!==0) cells.push(null);
+  function chipsFor(d){
+    const ds=y+'-'+pad(m+1)+'-'+pad(d);
+    return appr.filter(l=>{const s=l.start,e=l.end||l.start;return s<=ds&&ds<=e;}).map(l=>{
+      const e=emps.find(x=>x.id===l.emp); if(!e) return null;
+      const c=colorOf(l.emp);
+      const label=l.type==='hour'?(e.name+' '+(l.stime?l.stime+'~'+l.etime:fmtDays(l.days))):e.name;
+      return E('div',{key:l.lid,className:'cal-chip',style:{background:c.bg,color:c.fg},title:e.name+' · '+typeLabel(l)+' '+fmtDays(l.days)+(l.reason?' · '+l.reason:'')},label);
+    }).filter(Boolean);
+  }
+  return E('div',{className:'card'},
+    E('div',{className:'card-hdr'},
+      E('button',{className:'btn sm',onClick:()=>shift(-1)},'‹'),
+      E('span',null,y+'년 '+(m+1)+'월'),
+      E('button',{className:'btn sm',onClick:()=>shift(1)},'›'),
+      E('button',{className:'btn sm',style:{marginLeft:8},onClick:()=>setCur(new Date(now.getFullYear(),now.getMonth(),1))},'오늘')),
+    E('div',{className:'card-bd'},
+      E('div',{style:{fontSize:11,color:'#94a3b8',marginBottom:10}},'승인 완료된 연차만 표시됩니다. 이 달 연차 '+monthCount+'건 · 날짜 칸에 마우스를 올리면 상세가 보입니다.'),
+      E('div',{className:'cal-grid'},
+        WD.map((w,i)=>E('div',{key:'wd'+i,className:'cal-wd',style:{color:i===0?'#dc2626':i===6?'#2563eb':'#64748b'}},w)),
+        cells.map((d,i)=>{
+          if(d===null) return E('div',{key:'c'+i,className:'cal-cell empty'});
+          const ds=y+'-'+pad(m+1)+'-'+pad(d);
+          const wd=(startWd+d-1)%7;
+          const hol=HOLIDAYS[ds];
+          const numColor=(hol||wd===0)?'#dc2626':wd===6?'#2563eb':'#475569';
+          const chips=chipsFor(d);
+          return E('div',{key:'c'+i,className:'cal-cell'+(hol?' hol':'')+(ds===todayStr?' today':'')},
+            E('div',{className:'cal-day',style:{color:numColor}},d),
+            hol&&E('div',{className:'cal-hol',title:hol},hol),
+            chips);
+        })
+      )
+    ));
+}
+
+// ── 관리자 탭 ──
+function AdminTab({emps,leaves,saveEmps,saveLeaves}){
+  const [authed,setAuthed]=useState(false);
+  const [pw,setPw]=useState("");
+  const [err,setErr]=useState("");
+  const [sub,setSub]=useState("work"); // work | manage | hr
+  const [hrAuthed,setHrAuthed]=useState(false);
+  const [hrPw,setHrPw]=useState("");
+  const [hrErr,setHrErr]=useState("");
+
+  if(!authed){
+    return E('div',{className:'card'},E('div',{className:'card-bd',style:{maxWidth:340,margin:'0 auto',textAlign:'center'}},
+      E('div',{style:{fontSize:26,marginBottom:10}},'🔒'),
+      E('input',{type:'password',className:'inp',placeholder:'관리자 비밀번호',value:pw,style:{marginBottom:10},
+        onChange:e=>setPw(e.target.value),onKeyDown:e=>{if(e.key==='Enter')login();}}),
+      E('button',{className:'btn pri',style:{width:'100%'},onClick:login},'로그인'),
+      err&&E('div',{style:{color:'#dc2626',fontSize:12,marginTop:8}},err)
+    ));
+  }
+  function login(){ if(pw===ADMIN_PW){ setAuthed(true); setErr(""); } else setErr("비밀번호가 올바르지 않습니다."); }
+
+  function hrLogin(){ if(hrPw===HR_PW){ setHrAuthed(true); setHrErr(""); setHrPw(""); } else setHrErr("비밀번호가 올바르지 않습니다."); }
+  return E(React.Fragment,null,
+    E('div',{style:{display:'flex',gap:8,marginBottom:16}},
+      E('button',{className:'btn'+(sub==='work'?' pri':''),onClick:()=>setSub('work')},'📨 결재·현황'),
+      E('button',{className:'btn'+(sub==='manage'?' pri':''),onClick:()=>setSub('manage')},'⚙️ 직원·기록 관리'),
+      E('button',{className:'btn'+(sub==='hr'?' pri':''),onClick:()=>setSub('hr')},'🗂️ 인사기록부')),
+    sub==='work'?E(AdminWork,{emps,leaves,saveLeaves})
+    :sub==='manage'?E(AdminManage,{emps,leaves,saveEmps,saveLeaves})
+    :hrAuthed?E(HrTab,{emps})
+    :E('div',{className:'card'},E('div',{className:'card-bd',style:{maxWidth:340,margin:'0 auto',textAlign:'center'}},
+        E('div',{style:{fontSize:26,marginBottom:6}},'🗂️'),
+        E('div',{style:{fontSize:12,color:'#94a3b8',marginBottom:12}},'인사기록부는 별도 비밀번호가 필요합니다.'),
+        E('input',{type:'password',className:'inp',placeholder:'인사기록부 비밀번호',value:hrPw,style:{marginBottom:10},
+          onChange:e=>setHrPw(e.target.value),onKeyDown:e=>{if(e.key==='Enter')hrLogin();}}),
+        E('button',{className:'btn pri',style:{width:'100%'},onClick:hrLogin},'열기'),
+        hrErr&&E('div',{style:{color:'#dc2626',fontSize:12,marginTop:8}},hrErr)))
+  );
+}
+
+function AdminWork({emps,leaves,saveLeaves}){
+  const pend=leaves.filter(l=>l.status==='pending').sort((a,b)=>new Date(a.start)-new Date(b.start));
+  const setStatus=async(lid,status)=>{ await saveLeaves(leaves.map(l=>l.lid===lid?{...l,status}:l)); };
+  return E(React.Fragment,null,
+    E('div',{className:'card'},
+      E('div',{className:'card-hdr'},'📨 결재 대기 ('+pend.length+')'),
+      E('div',{className:'card-bd'},
+        pend.length===0?E('div',{style:{textAlign:'center',color:'#94a3b8',padding:20}},'대기 중인 신청이 없습니다.')
+        :pend.map(l=>{
+          const e=emps.find(x=>x.id===l.emp); if(!e) return null;
+          const ds=l.start===l.end?l.start:l.start+' ~ '+l.end;
+          const tag=typeLabel(l)+' '+fmtDays(l.days);
+          return E('div',{key:l.lid,style:{display:'flex',alignItems:'center',gap:10,border:'1px solid #e2e8f0',borderRadius:8,padding:'10px 12px',marginBottom:8}},
+            E('div',{style:{flex:1}},E('div',{style:{fontWeight:500}},e.name+' ',E('span',{style:{fontSize:11,color:'#64748b',fontWeight:400}},e.dept+' · '+tag)),E('div',{style:{fontSize:11,color:'#64748b'}},ds+' · '+l.reason)),
+            E('button',{className:'btn sm grn',onClick:()=>setStatus(l.lid,'approved')},'승인'),
+            E('button',{className:'btn sm dng',onClick:()=>setStatus(l.lid,'rejected')},'반려'));
+        }))),
+    E(StatTable,{emps,leaves,saveLeaves})
+  );
+}
+
+function StatTable({emps,leaves,saveLeaves}){
+  const [openId,setOpenId]=useState(null);
+  async function delLeave(l){
+    const e=emps.find(x=>x.id===l.emp);
+    const when=l.daysOnly?(l.year+'년'):(l.start===l.end?l.start:l.start+' ~ '+l.end);
+    if(!confirm((e?e.name:'')+' · '+when+' · '+fmtDays(l.days)+' 기록을 삭제합니다.\n삭제하면 누적 사용에서 빠지고 잔여가 복구됩니다. 계속하시겠습니까?')) return;
+    await saveLeaves(leaves.filter(x=>x.lid!==l.lid));
+  }
+  const stBadge=s=> s==='approved'?E('span',{className:'badge b-green'},'승인')
+                  : s==='pending'?E('span',{className:'badge b-amber'},'대기')
+                  : E('span',{className:'badge b-red'},'반려');
+  function historyRows(empId){
+    const list=leaves.filter(l=>l.emp===empId).sort((a,b)=>{
+      const ad=a.daysOnly?a.year+'-00':a.start, bd=b.daysOnly?b.year+'-00':b.start;
+      return bd<ad?-1:bd>ad?1:0;
+    });
+    if(!list.length) return E('div',{style:{padding:'10px 14px',color:'#94a3b8',fontSize:12}},'사용 이력이 없습니다.');
+    return E('table',{style:{margin:'4px 0'}},
+      E('thead',null,E('tr',null,['일자','종류','일수','사유','상태','구분','관리'].map(h=>E('th',{key:h},h)))),
+      E('tbody',null,list.map(l=>{
+        const when=l.daysOnly?(l.year+'년 (날짜없음)'):(l.start===l.end?l.start:l.start+' ~ '+l.end);
+        const kind=typeLabel(l);
+        return E('tr',{key:l.lid},
+          E('td',null,when),E('td',null,kind),
+          E('td',{style:{textAlign:'center'}},fmtDays(l.days)),
+          E('td',{style:{color:'#64748b'}},l.reason),
+          E('td',null,stBadge(l.status)),
+          E('td',null,l.imported?E('span',{className:'badge b-gray'},'과거이관'):E('span',{className:'badge b-blue'},'신청')),
+          E('td',null,E('button',{className:'btn sm dng',onClick:()=>delLeave(l)},'삭제')));
+      })));
+  }
+  return E('div',{className:'card'},
+    E('div',{className:'card-hdr'},'전 직원 연차 현황 ('+new Date().getFullYear()+' 기준, 누적·이월)'),
+    E('div',{style:{fontSize:11,color:'#94a3b8',padding:'0 16px 8px'}},'이름을 클릭하면 해당 직원의 전체 사용 이력이 펼쳐집니다.'),
+    E('div',{style:{overflowX:'auto'}},
+      E('table',null,
+        E('thead',null,E('tr',null,['이름','부서','입사일','근속','보유','누적사용','중간정산','잔여','대기'].map(h=>E('th',{key:h},h)))),
+        E('tbody',null,emps.map(e=>{
+          const b=balance(e,leaves);
+          const open=openId===e.id;
+          return E(React.Fragment,{key:e.id},
+            E('tr',{style:{cursor:'pointer',background:open?'#eff6ff':undefined},onClick:()=>setOpenId(open?null:e.id)},
+              E('td',{style:{fontWeight:500,color:'#1e40af'}},(open?'▾ ':'▸ ')+e.name),
+              E('td',{style:{color:'#64748b'}},e.dept),E('td',{style:{color:'#64748b'}},e.hire),
+              E('td',{style:{textAlign:'center',color:'#64748b'}},yLabel(b)),
+              E('td',{style:{textAlign:'center'}},fmtDays(b.total),b.hasOverride?E('span',{style:{color:'#1d4ed8',fontSize:10}},' (수동)'):null),
+              E('td',{style:{textAlign:'center'}},fmtDays(b.used)),
+              E('td',{style:{textAlign:'center',color:'#64748b'}},b.settle?fmtDays(b.settle):'–'),
+              E('td',{style:{textAlign:'center',color:b.remain<0?'#dc2626':'#1e40af',fontWeight:600}},fmtDays(b.remain)),
+              E('td',{style:{textAlign:'center',color:'#92400e'}},b.pending?fmtDays(b.pending):'–')),
+            open&&E('tr',null,E('td',{colSpan:9,style:{background:'#f8fafc',padding:'4px 10px'}},
+              E('div',{style:{fontSize:12,fontWeight:600,color:'#475569',margin:'6px 4px'}},e.name+' 사용 이력'),
+              historyRows(e.id))));
+        }))
+      )),
+    E('div',{style:{fontSize:11,color:'#94a3b8',padding:'10px 16px',lineHeight:1.7}},
+      '* 잔여 = 보유 − 누적사용 − 중간정산 (입사 이후 전체 누적·이월).',E('br'),
+      '* 보유는 근로기준법 기준으로 자동 계산되며(1년 미만 월 1일, 1년 이상 15일, 3년 이상 매 2년 +1, 최대 25일, 1년차 11개는 1주년 시 소멸), 직원·기록 관리 탭에서 직접 수정하면 "(수동)"으로 표시됩니다.',E('br'),
+      '* 중간정산은 연차를 금전 보상하거나 퇴사 정리한 일수로, 직원 관리에서 입력합니다.')
+  );
+}
+
+function AdminManage({emps,leaves,saveEmps,saveLeaves}){
+  const [editId,setEditId]=useState(null);
+  const [nName,setNName]=useState(""),[nHire,setNHire]=useState(""),[nDept,setNDept]=useState(""),[nPos,setNPos]=useState("");
+  const [eName,setEName]=useState(""),[eHire,setEHire]=useState(""),[eDept,setEDept]=useState(""),[ePos,setEPos]=useState("");
+  const [eHold,setEHold]=useState(""),[eSettle,setESettle]=useState("");
+  const [hmode,setHmode]=useState("period");
+  // 기간형
+  const [pEmp,setPEmp]=useState(""),[pStart,setPStart]=useState(""),[pEnd,setPEnd]=useState(""),[pDays,setPDays]=useState(""),[pReason,setPReason]=useState("");
+  // 일수형
+  const [dEmp,setDEmp]=useState(""),[dYear,setDYear]=useState(new Date().getFullYear()),[dDays,setDDays]=useState(""),[dReason,setDReason]=useState("");
+  const [hmsg,setHmsg]=useState(null);
+
+  async function addEmp(){
+    if(!nName||!nHire){ alert('이름과 입사일을 입력하세요.'); return; }
+    await saveEmps([...emps,{id:uid(),name:nName,hire:nHire,dept:nDept||'-',position:nPos||'-'}]);
+    setNName("");setNHire("");setNDept("");setNPos("");
+  }
+  function startEdit(e){ setEditId(e.id);setEName(e.name);setEHire(e.hire);setEDept(e.dept);setEPos(e.position);setEHold(e.holdOverride!==undefined&&e.holdOverride!==null?String(e.holdOverride):"");setESettle(e.settle?String(e.settle):""); }
+  async function saveEdit(){
+    if(!eName||!eHire){ alert('이름과 입사일은 비울 수 없습니다.'); return; }
+    const patch={name:eName,hire:eHire,dept:eDept||'-',position:ePos||'-'};
+    patch.holdOverride = (eHold===''||eHold===null) ? null : Number(eHold);
+    patch.settle = (eSettle===''||eSettle===null) ? 0 : Number(eSettle);
+    await saveEmps(emps.map(x=>x.id===editId?{...x,...patch}:x));
+    setEditId(null);
+  }
+  async function delEmp(e){
+    const cnt=leaves.filter(l=>l.emp===e.id).length;
+    if(!confirm(e.name+' 직원을 삭제합니다.'+(cnt?' 연차 기록 '+cnt+'건도 함께 삭제됩니다.':'')+'\n계속하시겠습니까?')) return;
+    await saveEmps(emps.filter(x=>x.id!==e.id));
+    await saveLeaves(leaves.filter(l=>l.emp!==e.id));
+  }
+  async function addPeriod(){
+    const days=parseFloat(pDays);
+    if(!pEmp||!pStart||isNaN(days)||days<=0){ setHmsg({t:'직원·시작일·일수를 정확히 입력하세요.',c:'#dc2626'}); return; }
+    await saveLeaves([...leaves,{lid:uid(),emp:pEmp,start:pStart,end:pEnd||pStart,type:'day',days,reason:pReason||'개인',status:'approved',imported:true}]);
+    setPStart("");setPEnd("");setPDays("");setPReason("");setHmsg({t:'추가되었습니다.',c:'#166534'});
+  }
+  async function addDaysOnly(){
+    const days=parseFloat(dDays);
+    if(!dEmp||!dYear||isNaN(days)||days<=0){ setHmsg({t:'직원·연도·일수를 정확히 입력하세요.',c:'#dc2626'}); return; }
+    await saveLeaves([...leaves,{lid:uid(),emp:dEmp,daysOnly:true,year:Number(dYear),days,reason:dReason||'과거 사용분',status:'approved',imported:true}]);
+    setDDays("");setDReason("");setHmsg({t:'추가되었습니다.',c:'#166534'});
+  }
+  async function delHist(lid){ await saveLeaves(leaves.filter(l=>l.lid!==lid)); }
+
+  const hist=leaves.filter(l=>l.imported).sort((a,b)=>(b.daysOnly?b.year:new Date(b.start).getFullYear())-(a.daysOnly?a.year:new Date(a.start).getFullYear()));
+  const years=[];for(let y=new Date().getFullYear();y>=2010;y--)years.push(y);
+
+  return E(React.Fragment,null,
+    // 직원 관리
+    E('div',{className:'card'},
+      E('div',{className:'card-hdr'},'👥 직원 관리'),
+      E('div',{className:'card-bd'},
+        E('div',{style:{fontSize:11,color:'#64748b',marginBottom:12}},'진급·부서 이동은 삭제하지 말고 수정으로 변경하세요. 직원 삭제 시 해당 직원의 모든 연차 기록도 함께 삭제됩니다.'),
+        E('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end',marginBottom:14}},
+          E('div',{style:{flex:1,minWidth:110}},E('span',{className:'lbl'},'이름'),E('input',{className:'inp',value:nName,onChange:e=>setNName(e.target.value),placeholder:'홍길동'})),
+          E('div',{style:{minWidth:140}},E('span',{className:'lbl'},'입사일'),E('input',{type:'date',className:'inp',value:nHire,onChange:e=>setNHire(e.target.value)})),
+          E('div',{style:{minWidth:100}},E('span',{className:'lbl'},'부서'),E('input',{className:'inp',value:nDept,onChange:e=>setNDept(e.target.value),placeholder:'설계팀'})),
+          E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'직위'),E('input',{className:'inp',value:nPos,onChange:e=>setNPos(e.target.value),placeholder:'사원'})),
+          E('button',{className:'btn pri',onClick:addEmp},'직원 추가')),
+        E('div',{style:{fontSize:12,fontWeight:600,marginBottom:6}},'직원 목록 ('+emps.length+')'),
+        emps.map(e=>editId===e.id
+          ? E('div',{key:e.id,style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'flex-end',padding:10,background:'#eff6ff',borderRadius:8,marginBottom:6}},
+              E('div',{style:{flex:1,minWidth:90}},E('span',{className:'lbl'},'이름'),E('input',{className:'inp',value:eName,onChange:ev=>setEName(ev.target.value)})),
+              E('div',{style:{minWidth:130}},E('span',{className:'lbl'},'입사일'),E('input',{type:'date',className:'inp',value:eHire,onChange:ev=>setEHire(ev.target.value)})),
+              E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'부서'),E('input',{className:'inp',value:eDept,onChange:ev=>setEDept(ev.target.value)})),
+              E('div',{style:{minWidth:80}},E('span',{className:'lbl'},'직위'),E('input',{className:'inp',value:ePos,onChange:ev=>setEPos(ev.target.value)})),
+              E('div',{style:{minWidth:110}},E('span',{className:'lbl'},'보유연차(비우면 자동)'),E('input',{type:'number',step:0.5,className:'inp',value:eHold,onChange:ev=>setEHold(ev.target.value),placeholder:'자동: '+fmtDays(autoHold(eHire||e.hire))})),
+              E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'중간정산'),E('input',{type:'number',step:0.5,className:'inp',value:eSettle,onChange:ev=>setESettle(ev.target.value),placeholder:'0'})),
+              E('button',{className:'btn sm grn',onClick:saveEdit},'저장'),
+              E('button',{className:'btn sm',onClick:()=>setEditId(null)},'취소'))
+          : (()=>{ const b=balance(e,leaves);
+              return E('div',{key:e.id,style:{display:'flex',alignItems:'center',gap:8,fontSize:12,padding:'7px 0',borderBottom:'1px solid #f1f5f9'}},
+                E('span',{style:{flex:1}},e.name+' · '+e.hire+' · '+e.dept+' '+e.position,
+                  E('span',{style:{color:'#94a3b8'}},'  | 보유 '+fmtDays(b.total)+(b.hasOverride?'(수동)':'')+' · 잔여 '+fmtDays(b.remain)+(b.settle?' · 정산 '+fmtDays(b.settle):''))),
+                E('button',{className:'btn sm',onClick:()=>startEdit(e)},'수정'),
+                E('button',{className:'btn sm dng',onClick:()=>delEmp(e)},'삭제'));
+            })())
+      )),
+    // 과거 기록 입력
+    E('div',{className:'card'},
+      E('div',{className:'card-hdr'},'📥 과거 기록 입력 (엑셀 이관용)'),
+      E('div',{className:'card-bd'},
+        E('div',{style:{fontSize:11,color:'#64748b',marginBottom:12}},'기존 사용 연차를 옮길 때만 사용합니다. 입력 즉시 결재 없이 승인 처리됩니다.'),
+        E('div',{className:'seg',style:{marginBottom:12}},
+          E('button',{className:hmode==='period'?'on':'',onClick:()=>setHmode('period')},'기간 입력'),
+          E('button',{className:hmode==='daysonly'?'on':'',onClick:()=>setHmode('daysonly')},'일수만 입력')),
+        hmode==='period'
+          ? E('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}},
+              E('div',{style:{minWidth:110}},E('span',{className:'lbl'},'직원'),E('select',{className:'inp',value:pEmp,onChange:e=>setPEmp(e.target.value)},E('option',{value:''},'선택'),emps.map(e=>E('option',{key:e.id,value:e.id},e.name)))),
+              E('div',{style:{minWidth:130}},E('span',{className:'lbl'},'시작일'),E('input',{type:'date',className:'inp',value:pStart,onChange:e=>setPStart(e.target.value)})),
+              E('div',{style:{minWidth:130}},E('span',{className:'lbl'},'종료일(선택)'),E('input',{type:'date',className:'inp',value:pEnd,onChange:e=>setPEnd(e.target.value)})),
+              E('div',{style:{width:80}},E('span',{className:'lbl'},'일수'),E('input',{type:'number',step:0.5,className:'inp',value:pDays,onChange:e=>setPDays(e.target.value),placeholder:'1'})),
+              E('div',{style:{flex:1,minWidth:110}},E('span',{className:'lbl'},'사유'),E('input',{className:'inp',value:pReason,onChange:e=>setPReason(e.target.value),placeholder:'개인'})),
+              E('button',{className:'btn pri',onClick:addPeriod},'추가'))
+          : E('div',null,
+              E('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}},
+                E('div',{style:{minWidth:110}},E('span',{className:'lbl'},'직원'),E('select',{className:'inp',value:dEmp,onChange:e=>setDEmp(e.target.value)},E('option',{value:''},'선택'),emps.map(e=>E('option',{key:e.id,value:e.id},e.name)))),
+                E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'연도'),E('select',{className:'inp',value:dYear,onChange:e=>setDYear(e.target.value)},years.map(y=>E('option',{key:y,value:y},y+'년')))),
+                E('div',{style:{width:100}},E('span',{className:'lbl'},'사용 일수'),E('input',{type:'number',step:0.5,className:'inp',value:dDays,onChange:e=>setDDays(e.target.value),placeholder:'7'})),
+                E('div',{style:{flex:1,minWidth:110}},E('span',{className:'lbl'},'메모(선택)'),E('input',{className:'inp',value:dReason,onChange:e=>setDReason(e.target.value),placeholder:'과거 사용분'})),
+                E('button',{className:'btn pri',onClick:addDaysOnly},'추가')),
+              E('div',{style:{fontSize:11,color:'#94a3b8',marginTop:6}},'날짜 없이 합계 일수만 기록됩니다. 달력에는 표시되지 않고 잔여·현황 계산에만 반영됩니다.')),
+        hmsg&&E('div',{style:{fontSize:12,marginTop:8,color:hmsg.c}},hmsg.t),
+        E('div',{style:{fontSize:12,fontWeight:600,marginTop:14,marginBottom:6}},'입력된 과거 기록 ('+hist.length+')'),
+        hist.length===0?E('div',{style:{fontSize:12,color:'#94a3b8'}},'입력된 과거 기록이 없습니다.')
+        :hist.map(l=>{const e=emps.find(x=>x.id===l.emp);const nm=e?e.name:'(삭제된 직원)';
+          const desc=l.daysOnly?(l.year+'년 · 일수만 '+fmtDays(l.days)):(l.start+(l.end!==l.start?' ~ '+l.end:'')+' · '+fmtDays(l.days));
+          return E('div',{key:l.lid,style:{display:'flex',alignItems:'center',gap:8,fontSize:12,padding:'6px 0',borderBottom:'1px solid #f1f5f9'}},
+            E('span',{style:{flex:1}},nm+' · '+desc+' · '+l.reason),
+            E('button',{className:'btn sm dng',onClick:()=>delHist(l.lid)},'삭제'));
+        })
+      ))
+  );
+}
+
+// ── 인사기록부 (관리자 안 2차 관문) ──
+// 데이터: hr_profiles(직원별 인적사항), hr_records(인사기록). 직원 삭제 후에도 기록은 보관됨.
+const HR_KINDS=['징계','경고','포상','사고·이슈','면담','퇴사사유','기타'];
+const HR_KIND_BADGE={'징계':'b-red','경고':'b-amber','포상':'b-green','사고·이슈':'b-amber','면담':'b-blue','퇴사사유':'b-gray','기타':'b-gray'};
+
+// pdf.js 지연 로드 (엑셀 내보내기의 SheetJS와 같은 패턴)
+let PDFJS_P=null;
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(PDFJS_P) return PDFJS_P;
+  PDFJS_P=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=()=>{ window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(window.pdfjsLib); };
+    s.onerror=()=>rej(new Error('pdf.js 로드 실패 (인터넷 연결 확인)'));
+    document.head.appendChild(s);
+  });
+  return PDFJS_P;
+}
+// PDF → 줄 단위 텍스트 (y좌표로 줄 복원, 파일은 저장하지 않음)
+async function pdfToLines(file){
+  const lib=await loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const doc=await lib.getDocument({data:buf}).promise;
+  const lines=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p);
+    const tc=await page.getTextContent();
+    const rows={};
+    tc.items.forEach(it=>{
+      const y=Math.round(it.transform[5]);
+      let key=null;
+      for(const k in rows){ if(Math.abs(Number(k)-y)<=3){ key=k; break; } }
+      if(key===null){ key=String(y); rows[key]=[]; }
+      rows[key].push({x:it.transform[4],str:it.str});
+    });
+    Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y=>{
+      const line=rows[String(y)].sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+      if(line) lines.push(line);
+    });
+  }
+  if(lines.length===0) throw new Error('글자를 찾지 못했습니다. 스캔 이미지 PDF는 지원하지 않습니다.');
+  return lines;
+}
+function hrNormDate(s){
+  const m=s&&s.match(/((?:19|20)\d{2})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})/);
+  if(!m) return '';
+  const pad=n=>String(n).padStart(2,'0');
+  return m[1]+'-'+pad(m[2])+'-'+pad(m[3]);
+}
+// 표준 이력서 양식의 라벨 기반 파서. 같은 줄에 라벨이 여럿이어도 다음 라벨 전까지만 값으로 인식.
+const HR_LABELS=['성명','성 명','이름','이 름','생년월일','성별','성 별','휴대폰','휴대전화','연락처','전화번호','이메일','E-mail','주소','비상연락처','학교명','최종학력','전공','졸업연도','졸업','경력','자격증명','자격증','자격사항','취득연도','특이사항','비자 종류','비자종류','비자','체류기간 만료일','체류기간','외국인등록번호','입사일','부서','직위'];
+function hrParseResume(lines){
+  const all=lines.join('\n');
+  const cut=v=>{
+    let idx=v.length;
+    for(const t of HR_LABELS){ const i=v.indexOf(t); if(i===0) return ''; if(i>0&&i<idx) idx=i; }
+    // pdf.js가 숫자 사이 하이픈에 공백을 넣는 경우 복원 (010 - 1234 → 010-1234)
+    return v.slice(0,idx).replace(/(\d)\s*-\s*(\d)/g,'$1-$2').replace(/[\s:：|.\-]+$/,'').trim();
+  };
+  const after=lab=>{
+    for(const ln of lines){
+      const i=ln.indexOf(lab);
+      if(i>=0){
+        const v=cut(ln.slice(i+lab.length).replace(/^[\s:：|.]+/,''));
+        if(v) return v;
+      }
+    }
+    return '';
+  };
+  const firstOf=(...labs)=>{ for(const l of labs){ const v=after(l); if(v) return v; } return ''; };
+  const out={};
+  out.name=(firstOf('성명','성 명','이름','이 름').split(' ')[0])||'';
+  const phoneSrc=firstOf('휴대폰','휴대전화','연락처','전화번호')||all;
+  const pm=phoneSrc.match(/01[016789][\s.\-]{0,3}\d{3,4}[\s.\-]{0,3}\d{4}/);
+  if(pm){ const d=pm[0].replace(/\D/g,''); out.phone=d.length===11?d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7):d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6); }
+  const em=all.match(/[\w.+-]+@[\w-]+\.[\w.]+/); if(em) out.email=em[0];
+  out.birth=hrNormDate(firstOf('생년월일'));
+  const g=all.match(/성\s*별[^남여]{0,8}(남|여)/); if(g) out.gender=g[1];
+  out.address=firstOf('주소');
+  out.notes=firstOf('특이사항');
+  out.visaType=firstOf('비자 종류','비자종류');
+  out.visaExpiry=hrNormDate(firstOf('체류기간 만료일','체류기간'));
+  out.foreignRegNo=firstOf('외국인등록번호');
+  // 섹션 캡처: 제목 줄 다음부터 다음 섹션 제목 전까지
+  const heads=/^(\d+[.)]\s*)?(인적|학\s*력|경\s*력|자\s*격|특이|비상|기타|수상|어학|외국어|병역|비자|체류|외국인)/;
+  const section=(startRe,skipRe)=>{
+    let cap=false; const buf=[];
+    for(const ln of lines){
+      if(!cap&&startRe.test(ln)){ cap=true; continue; }
+      if(cap){ if(skipRe&&skipRe.test(ln)) continue; if(heads.test(ln)) break; buf.push(ln); }
+    }
+    return buf;
+  };
+  const yearTail=s=>{ const m=s.match(/((?:19|20)\d{2})(?!.*(?:19|20)\d{2})/); return m?m[1]:''; };
+  // 학력: 학교명 전공 졸업연도 × 여러 줄
+  const edus=[];
+  section(/^(\d+[.)]\s*)?학\s*력/,/^학교명/).forEach(ln=>{
+    const y=yearTail(ln); let rest=y?ln.slice(0,ln.lastIndexOf(y)):ln;
+    rest=rest.replace(/[\s.\-~()]+$/,'').trim();
+    if(!rest&&!y) return;
+    const parts=rest.split(/\s+/);
+    edus.push({school:parts[0]||'',major:parts.slice(1).join(' '),year:y});
+  });
+  if(edus.length) out.edus=edus;
+  else{ // 자유형식 이력서: 라벨 기반으로 1건이라도
+    const s=firstOf('학교명','최종학력'), mj=firstOf('전공');
+    const gy=firstOf('졸업연도','졸업'); const gym=gy&&gy.match(/(?:19|20)\d{2}/);
+    if(s||mj||gym) out.edus=[{school:s,major:mj,year:gym?gym[0]:''}];
+  }
+  // 자격증: 자격증명 취득연도 × 여러 줄
+  const certs=[];
+  section(/^(\d+[.)]\s*)?자\s*격/,/^자격증명/).forEach(ln=>{
+    const y=yearTail(ln); let rest=y?ln.slice(0,ln.lastIndexOf(y)):ln;
+    rest=rest.replace(/[\s.\-~()]+$/,'').trim();
+    if(!rest) return;
+    certs.push({name:rest,year:y});
+  });
+  if(certs.length) out.certList=certs;
+  else{ const c=firstOf('자격증','자격사항'); if(c) out.certList=[{name:c,year:''}]; }
+  // 경력: 원문 그대로
+  const car=section(/^(\d+[.)]\s*)?경\s*력/,/^회사명/);
+  if(car.length) out.career=car.join('\n');
+  return out;
+}
+
+// 내용에 맞춰 높이가 자동으로 늘어나는 여러 줄 입력칸
+function AutoTA({value,onChange,placeholder}){
+  const ref=React.useRef(null);
+  useEffect(()=>{ const el=ref.current; if(el){ el.style.height='auto'; el.style.height=(el.scrollHeight+2)+'px'; } },[value]);
+  return E('textarea',{ref,className:'inp',style:{resize:'none',overflow:'hidden',minHeight:66,lineHeight:1.6},
+    value:value||'',onChange,placeholder});
+}
+
+// 인쇄용 인사기록부 (화면에는 안 보이고 인쇄 시에만 출력)
+function HrPrint({emp,form,recs}){
+  const th={border:'0.5px solid #888',background:'#f1efe8',padding:'6px 8px',textAlign:'center',color:'#444',width:'14%',fontSize:12};
+  const td={border:'0.5px solid #888',padding:'6px 8px',fontSize:12};
+  const F=k=>(form[k]===undefined||form[k]===null)?'':String(form[k]);
+  const edus=Array.isArray(form.edus)?form.edus:[];
+  const certs=Array.isArray(form.certList)?form.certList:[];
+  const sals=Array.isArray(form.salaries)?form.salaries:[];
+  const row4=(a,b,c,d)=>E('tr',null,E('th',{style:th},a),E('td',{style:{...td,width:'36%'}},b),E('th',{style:th},c),E('td',{style:{...td,width:'36%'}},d));
+  const sec=t=>E('div',{style:{fontSize:13,fontWeight:700,margin:'12px 0 4px'}},t);
+  const kindMark=k=>k==='징계'||k==='경고'?'⚠ '+k:k;
+  return E('div',{id:'print-area',className:'print-only',style:{padding:'1.2rem',background:'#fff'}},
+    E('div',{style:{textAlign:'center',fontSize:24,fontWeight:700,letterSpacing:8,marginBottom:4}},'인 사 기 록 부'),
+    E('div',{style:{textAlign:'center',fontSize:11,color:'#555',marginBottom:14}},'㈜케이엠제이 · 출력일 '+today()+' · 대외비'),
+    E('table',{style:{width:'100%',borderCollapse:'collapse'}},E('tbody',null,
+      row4('성명',emp.name,'부서/직위',emp.dept+' '+emp.position),
+      row4('입사일',emp.hire,'생년월일',F('birth')),
+      row4('성별',F('gender'),'휴대폰',F('phone')),
+      row4('이메일',F('email'),'계약형태',F('contractType')),
+      E('tr',null,E('th',{style:th},'주소'),E('td',{style:td,colSpan:3},F('address'))),
+      (F('contractEnd')||F('resignDate'))?row4('계약종료일',F('contractEnd'),'퇴사일',F('resignDate')):null,
+      (F('visaType')||F('visaExpiry'))?row4('비자 종류',F('visaType'),'체류 만료일',F('visaExpiry')):null,
+      F('foreignRegNo')?E('tr',null,E('th',{style:th},'외국인등록번호'),E('td',{style:td,colSpan:3},F('foreignRegNo'))):null
+    )),
+    edus.length>0&&E(React.Fragment,null,sec('학력'),
+      E('table',{style:{width:'100%',borderCollapse:'collapse'}},E('tbody',null,
+        E('tr',null,['학교명','전공','졸업연도'].map(h=>E('th',{key:h,style:{...th,width:'auto'}},h))),
+        edus.map((d,i)=>E('tr',{key:i},E('td',{style:td},d.school),E('td',{style:td},d.major),E('td',{style:{...td,textAlign:'center'}},d.year)))))),
+    F('career')&&E(React.Fragment,null,sec('경력'),
+      E('div',{style:{border:'0.5px solid #888',padding:'6px 8px',fontSize:12,whiteSpace:'pre-wrap'}},F('career'))),
+    certs.length>0&&E(React.Fragment,null,sec('자격증'),
+      E('table',{style:{width:'100%',borderCollapse:'collapse'}},E('tbody',null,
+        E('tr',null,['자격증명','취득연도'].map(h=>E('th',{key:h,style:{...th,width:'auto'}},h))),
+        certs.map((c,i)=>E('tr',{key:i},E('td',{style:td},c.name),E('td',{style:{...td,textAlign:'center',width:'20%'}},c.year)))))),
+    sals.length>0&&E(React.Fragment,null,sec('연봉 이력'),
+      E('table',{style:{width:'100%',borderCollapse:'collapse'}},E('tbody',null,
+        E('tr',null,['연도','연봉','비고'].map(h=>E('th',{key:h,style:{...th,width:'auto'}},h))),
+        sals.map((s,i)=>E('tr',{key:i},
+          E('td',{style:{...td,width:'15%',textAlign:'center'}},s.year),
+          E('td',{style:{...td,width:'35%'}},s.amount),
+          E('td',{style:td},s.memo)))))),
+    F('notes')&&E(React.Fragment,null,sec('특이사항'),
+      E('div',{style:{border:'0.5px solid #888',padding:'6px 8px',fontSize:12,whiteSpace:'pre-wrap'}},F('notes'))),
+    sec('인사기록 ('+recs.length+')'),
+    recs.length===0
+      ? E('div',{style:{fontSize:12,color:'#666'}},'기록 없음')
+      : E('table',{style:{width:'100%',borderCollapse:'collapse'}},E('tbody',null,
+          E('tr',null,['일자','구분','내용','작성자'].map(h=>E('th',{key:h,style:{...th,width:'auto'}},h))),
+          recs.map(r=>E('tr',{key:r.rid},
+            E('td',{style:{...td,width:'14%',textAlign:'center'}},r.date),
+            E('td',{style:{...td,width:'12%',textAlign:'center'}},kindMark(r.kind)),
+            E('td',{style:td},r.content),
+            E('td',{style:{...td,width:'12%',textAlign:'center'}},r.writer)))))
+  );
+}
+
+function HrTab({emps}){
+  const [profiles,setProfiles]=useState({});
+  const [records,setRecords]=useState([]);
+  const [loaded,setLoaded]=useState(false);
+  const [selEmp,setSelEmp]=useState("");
+  const [form,setForm]=useState({});
+  const [pmsg,setPmsg]=useState(null);
+  const [parsing,setParsing]=useState(false);
+  const [rDate,setRDate]=useState(today());
+  const [rKind,setRKind]=useState('면담');
+  const [rText,setRText]=useState("");
+  const [rWriter,setRWriter]=useState("");
+  const [rmsg,setRmsg]=useState(null);
+
+  useEffect(()=>{
+    let u1,u2;
+    (async()=>{
+      const p=await dbGet('hr_profiles'); const r=await dbGet('hr_records');
+      setProfiles(p||{}); setRecords(r||[]); setLoaded(true);
+      u1=dbListen('hr_profiles',v=>setProfiles(v||{}));
+      u2=dbListen('hr_records',v=>setRecords(v||[]));
+    })();
+    return ()=>{ u1&&u1(); u2&&u2(); };
+  },[]);
+  useEffect(()=>{ setForm((profiles&&profiles[selEmp])||{}); setPmsg(null); setRmsg(null); },[selEmp,loaded]);
+
+  const emp=emps.find(e=>e.id===selEmp);
+  const F=k=>(form[k]===undefined||form[k]===null)?'':form[k];
+  const setF=(k,v)=>setForm(prev=>({...prev,[k]:v}));
+  const fld=(label,key,type)=>E('div',null,E('span',{className:'lbl'},label),
+    E('input',{type:type||'text',className:'inp',value:F(key),onChange:e=>setF(key,e.target.value)}));
+  // 목록형 항목(학력·자격증) 조작
+  const listSet=(key,i,k,v)=>setForm(prev=>{const a=[...(prev[key]||[])];a[i]={...a[i],[k]:v};return {...prev,[key]:a};});
+  const listAdd=(key,tpl)=>setForm(prev=>({...prev,[key]:[...(prev[key]||[]),tpl]}));
+  const listDel=(key,i)=>setForm(prev=>{const a=[...(prev[key]||[])];a.splice(i,1);return {...prev,[key]:a};});
+  const edus=Array.isArray(form.edus)?form.edus:[];
+  const certList=Array.isArray(form.certList)?form.certList:[];
+  const eduBlock=E('div',{style:{marginBottom:12}},
+    E('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:6}},
+      E('span',{className:'lbl',style:{marginBottom:0}},'학력 (고등학교·대학교·대학원 등 전부, 오래된 순)'),
+      E('button',{className:'btn sm',onClick:()=>listAdd('edus',{school:'',major:'',year:''})},'＋ 학력 추가')),
+    edus.length===0&&E('div',{style:{fontSize:11,color:'#94a3b8'}},'등록된 학력이 없습니다. [＋ 학력 추가]를 누르세요.'),
+    edus.map((ed,i)=>E('div',{key:'ed'+i,style:{display:'flex',gap:6,marginBottom:6,alignItems:'center'}},
+      E('input',{className:'inp',style:{flex:2},placeholder:'학교명',value:ed.school||'',onChange:e=>listSet('edus',i,'school',e.target.value)}),
+      E('input',{className:'inp',style:{flex:2},placeholder:'전공',value:ed.major||'',onChange:e=>listSet('edus',i,'major',e.target.value)}),
+      E('input',{className:'inp',style:{width:90,flex:'none'},placeholder:'졸업연도',value:ed.year||'',onChange:e=>listSet('edus',i,'year',e.target.value)}),
+      E('button',{className:'btn sm dng',onClick:()=>listDel('edus',i)},'삭제'))));
+  const certBlock=E('div',{style:{marginBottom:12}},
+    E('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:6}},
+      E('span',{className:'lbl',style:{marginBottom:0}},'자격증'),
+      E('button',{className:'btn sm',onClick:()=>listAdd('certList',{name:'',year:''})},'＋ 자격증 추가')),
+    certList.length===0&&E('div',{style:{fontSize:11,color:'#94a3b8'}},'등록된 자격증이 없습니다. [＋ 자격증 추가]를 누르세요.'),
+    certList.map((c,i)=>E('div',{key:'ct'+i,style:{display:'flex',gap:6,marginBottom:6,alignItems:'center'}},
+      E('input',{className:'inp',style:{flex:3},placeholder:'자격증명',value:c.name||'',onChange:e=>listSet('certList',i,'name',e.target.value)}),
+      E('input',{className:'inp',style:{width:90,flex:'none'},placeholder:'취득연도',value:c.year||'',onChange:e=>listSet('certList',i,'year',e.target.value)}),
+      E('button',{className:'btn sm dng',onClick:()=>listDel('certList',i)},'삭제'))));
+  const salaries=Array.isArray(form.salaries)?form.salaries:[];
+  const salBlock=E('div',{style:{marginBottom:12}},
+    E('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:6}},
+      E('span',{className:'lbl',style:{marginBottom:0}},'연봉 이력 (연도별)'),
+      E('button',{className:'btn sm',onClick:()=>listAdd('salaries',{year:String(new Date().getFullYear()),amount:'',memo:''})},'＋ 연봉 추가')),
+    salaries.length===0&&E('div',{style:{fontSize:11,color:'#94a3b8'}},'등록된 연봉 이력이 없습니다. [＋ 연봉 추가]를 누르세요.'),
+    salaries.map((s,i)=>E('div',{key:'sl'+i,style:{display:'flex',gap:6,marginBottom:6,alignItems:'center'}},
+      E('input',{className:'inp',style:{width:90,flex:'none'},placeholder:'연도',value:s.year||'',onChange:e=>listSet('salaries',i,'year',e.target.value)}),
+      E('input',{className:'inp',style:{flex:2},placeholder:'연봉 (예: 3,600만원)',value:s.amount||'',onChange:e=>listSet('salaries',i,'amount',e.target.value)}),
+      E('input',{className:'inp',style:{flex:2},placeholder:'비고 (예: 진급 인상)',value:s.memo||'',onChange:e=>listSet('salaries',i,'memo',e.target.value)}),
+      E('button',{className:'btn sm dng',onClick:()=>listDel('salaries',i)},'삭제'))));
+
+  async function saveProfile(){
+    if(!selEmp) return;
+    const next={...profiles,[selEmp]:{...form,name:emp?emp.name:(form.name||'')}};
+    setProfiles(next); await dbSet('hr_profiles',next);
+    setPmsg({t:'저장되었습니다.',c:'#166534'});
+  }
+  async function onResume(ev){
+    const file=ev.target.files[0]; ev.target.value='';
+    if(!file) return;
+    if(!selEmp){ setPmsg({t:'직원을 먼저 선택하세요.',c:'#dc2626'}); return; }
+    if(file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name)){ setPmsg({t:'PDF 파일만 지원합니다.',c:'#dc2626'}); return; }
+    setParsing(true); setPmsg(null);
+    try{
+      const lines=await pdfToLines(file);
+      const p=hrParseResume(lines);
+      let cnt=0;
+      setForm(prev=>{ const merged={...prev}; Object.keys(p).forEach(k=>{ if(p[k]){ merged[k]=p[k]; cnt++; } }); return merged; });
+      const warn=(p.name&&emp&&p.name!==emp.name)?' ⚠ 이력서 이름('+p.name+')이 선택 직원('+emp.name+')과 다릅니다!':'';
+      setPmsg({t:'이력서에서 항목을 읽어 채웠습니다. 내용 확인·수정 후 [저장]을 누르세요. (파일은 저장되지 않습니다)'+warn,c:warn?'#dc2626':'#854d0e'});
+    }catch(e){ console.error(e); setPmsg({t:'PDF를 읽지 못했습니다: '+e.message,c:'#dc2626'}); }
+    setParsing(false);
+  }
+  async function addRecord(){
+    if(!selEmp) return;
+    if(!rDate||!rText.trim()){ setRmsg({t:'일자와 내용을 입력하세요.',c:'#dc2626'}); return; }
+    const rec={rid:uid(),emp:selEmp,empName:emp?emp.name:'',date:rDate,kind:rKind,content:rText.trim(),writer:rWriter.trim()||'관리자'};
+    const next=[...records,rec];
+    setRecords(next); await dbSet('hr_records',next);
+    setRText(""); setRmsg({t:'기록되었습니다.',c:'#166534'});
+  }
+  async function delRecord(r){
+    if(!confirm((r.empName||'')+' · '+r.date+' · ['+r.kind+'] 기록을 삭제합니다. 계속하시겠습니까?')) return;
+    const next=records.filter(x=>x.rid!==r.rid);
+    setRecords(next); await dbSet('hr_records',next);
+  }
+
+  if(!loaded) return E('div',{style:{color:'#94a3b8',padding:20}},'인사 데이터 불러오는 중...');
+  const empRecs=records.filter(r=>r.emp===selEmp).sort((a,b)=>a.date<b.date?1:-1);
+  const orphans=records.filter(r=>!emps.find(e=>e.id===r.emp)).sort((a,b)=>a.date<b.date?1:-1);
+
+  return E(React.Fragment,null,
+    E('div',{className:'card'},
+      E('div',{className:'card-hdr'},'👤 인적사항',
+        E('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+          E('button',{className:'btn sm',disabled:!selEmp,onClick:()=>{if(selEmp)window.print();}},'🖨️ 인사기록부 인쇄'),
+          E('label',{className:'btn sm',style:{cursor:'pointer'}},parsing?'⏳ PDF 읽는 중...':'📄 이력서 PDF 자동입력',
+            E('input',{type:'file',accept:'application/pdf,.pdf',style:{display:'none'},onChange:onResume,disabled:parsing})))),
+      E('div',{className:'card-bd'},
+        E('div',{style:{marginBottom:12,maxWidth:300}},E('span',{className:'lbl'},'직원 선택'),
+          E('select',{className:'inp',value:selEmp,onChange:e=>setSelEmp(e.target.value)},
+            E('option',{value:''},'직원을 선택하세요'),
+            emps.map(e=>E('option',{key:e.id,value:e.id},e.name+' ('+e.dept+' '+e.position+')')))),
+        !selEmp
+          ? E('div',{style:{color:'#94a3b8',fontSize:12,padding:'6px 0'}},'직원을 선택하면 인적사항·인사기록이 표시됩니다. 표준 양식 이력서 PDF를 올리면 항목이 자동으로 채워집니다.')
+          : E(React.Fragment,null,
+              E('div',{className:'grid3',style:{marginBottom:10}},
+                E('div',null,E('span',{className:'lbl'},'입사일 (직원·기록 관리와 자동 연동)'),
+                  E('input',{className:'inp',value:emp?emp.hire:'',readOnly:true,style:{background:'#f1f5f9',color:'#475569'}})),
+                fld('생년월일','birth','date'),
+                E('div',null,E('span',{className:'lbl'},'성별'),
+                  E('select',{className:'inp',value:F('gender'),onChange:e=>setF('gender',e.target.value)},
+                    E('option',{value:''},'-'),E('option',{value:'남'},'남'),E('option',{value:'여'},'여')))),
+              E('div',{className:'grid3',style:{marginBottom:10}},
+                fld('휴대폰','phone'),
+                fld('이메일','email'),
+                fld('주소','address')),
+              eduBlock,
+              E('div',{style:{marginBottom:10}},E('span',{className:'lbl'},'경력 (회사명 · 기간 · 직무, 줄바꿈으로 여러 건 — 칸은 자동으로 늘어남)'),
+                E(AutoTA,{value:F('career'),onChange:e=>setF('career',e.target.value),placeholder:'예: (주)대한정밀  2010.01 ~ 2015.12  CNC 가공'})),
+              certBlock,
+              E('div',{className:'grid3',style:{marginBottom:10}},
+                E('div',null,E('span',{className:'lbl'},'계약형태'),
+                  E('select',{className:'inp',value:F('contractType'),onChange:e=>setF('contractType',e.target.value)},
+                    E('option',{value:''},'-'),['정규직','계약직','일용직','기타'].map(t=>E('option',{key:t,value:t},t)))),
+                fld('계약종료일','contractEnd','date'),
+                fld('퇴사일','resignDate','date')),
+              salBlock,
+              E('div',{style:{fontSize:11,fontWeight:600,color:'#64748b',margin:'4px 0 6px'}},'외국인 직원 항목 (해당자만)'),
+              E('div',{className:'grid3',style:{marginBottom:12}},
+                fld('비자 종류','visaType'),
+                fld('체류기간 만료일','visaExpiry','date'),
+                fld('외국인등록번호','foreignRegNo')),
+              E('div',{style:{marginBottom:12}},E('span',{className:'lbl'},'특이사항 (자유롭게 — 칸은 자동으로 늘어남)'),
+                E(AutoTA,{value:F('notes'),onChange:e=>setF('notes',e.target.value)})),
+              E('button',{className:'btn pri',onClick:saveProfile},'💾 인적사항 저장'),
+              pmsg&&E('div',{style:{fontSize:12,marginTop:10,color:pmsg.c}},pmsg.t)
+            ))),
+    E('div',{className:'card'},
+      E('div',{className:'card-hdr'},'📋 인사기록'+(selEmp&&emp?' — '+emp.name+' ('+empRecs.length+')':'')),
+      E('div',{className:'card-bd'},
+        !selEmp
+          ? E('div',{style:{color:'#94a3b8',fontSize:12}},'직원을 먼저 선택하세요.')
+          : E(React.Fragment,null,
+              E('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end',marginBottom:12}},
+                E('div',{style:{minWidth:130}},E('span',{className:'lbl'},'일자'),E('input',{type:'date',className:'inp',value:rDate,onChange:e=>setRDate(e.target.value)})),
+                E('div',{style:{minWidth:100}},E('span',{className:'lbl'},'구분'),E('select',{className:'inp',value:rKind,onChange:e=>setRKind(e.target.value)},HR_KINDS.map(k=>E('option',{key:k,value:k},k)))),
+                E('div',{style:{flex:2,minWidth:200}},E('span',{className:'lbl'},'내용'),E('input',{className:'inp',value:rText,onChange:e=>setRText(e.target.value),placeholder:'예: 무단결근 2일 경고 조치',onKeyDown:e=>{if(e.key==='Enter')addRecord();}})),
+                E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'작성자'),E('input',{className:'inp',value:rWriter,onChange:e=>setRWriter(e.target.value),placeholder:'관리자'})),
+                E('button',{className:'btn pri',onClick:addRecord},'기록 추가')),
+              rmsg&&E('div',{style:{fontSize:12,marginBottom:8,color:rmsg.c}},rmsg.t),
+              empRecs.length===0
+                ? E('div',{style:{color:'#94a3b8',fontSize:12}},'기록이 없습니다.')
+                : empRecs.map(r=>E('div',{key:r.rid,style:{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #f1f5f9',fontSize:12}},
+                    E('span',{style:{color:'#64748b',minWidth:78}},r.date),
+                    E('span',{className:'badge '+(HR_KIND_BADGE[r.kind]||'b-gray')},r.kind),
+                    E('span',{style:{flex:1}},r.content),
+                    E('span',{style:{color:'#94a3b8'}},r.writer),
+                    E('button',{className:'btn sm dng',onClick:()=>delRecord(r)},'삭제')))),
+        orphans.length>0&&E('div',{style:{marginTop:16,paddingTop:12,borderTop:'1px solid #e2e8f0'}},
+          E('div',{style:{fontSize:12,fontWeight:600,marginBottom:6}},'퇴사·삭제된 직원의 기록 ('+orphans.length+') — 직원을 삭제해도 인사기록은 보관됩니다'),
+          orphans.map(r=>E('div',{key:r.rid,style:{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:'1px solid #f8fafc',fontSize:12}},
+            E('span',{style:{color:'#64748b',minWidth:78}},r.date),
+            E('span',{style:{fontWeight:500,minWidth:56}},r.empName||'(미상)'),
+            E('span',{className:'badge '+(HR_KIND_BADGE[r.kind]||'b-gray')},r.kind),
+            E('span',{style:{flex:1}},r.content),
+            E('button',{className:'btn sm dng',onClick:()=>delRecord(r)},'삭제')))),
+        E('div',{style:{fontSize:11,color:'#94a3b8',marginTop:12,lineHeight:1.7}},
+          '* 이력서 PDF는 정보만 읽고 파일은 저장하지 않습니다. 원본은 NAS 폴더에 보관하세요.',E('br'),
+          '* 표준 양식이 아닌 과거 이력서는 일부만 자동 인식되므로 나머지는 직접 입력하세요.',E('br'),
+          '* 인사기록은 직원 삭제 후에도 이름과 함께 보관됩니다.'))),
+    selEmp&&emp&&E(HrPrint,{emp,form,recs:empRecs}));
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(E(App));
+</script>
+</body>
+</html>
