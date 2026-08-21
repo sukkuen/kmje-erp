@@ -313,7 +313,7 @@ function ApplyTab({emps,leaves,saveLeaves}){
           E('div',null,E('span',{className:'lbl'},'이름'),
             E('select',{className:'inp',value:empId,onChange:e=>setEmpId(e.target.value)},
               E('option',{value:''},'직원 선택'),
-              emps.map(e=>E('option',{key:e.id,value:e.id},e.name)))),
+              emps.filter(e=>e.status!=='resigned').map(e=>E('option',{key:e.id,value:e.id},e.name)))),
           E('div',null,E('span',{className:'lbl'},'부서'),E('input',{className:'inp',value:emp?emp.dept:'',readOnly:true})),
           E('div',null,E('span',{className:'lbl'},'직위'),E('input',{className:'inp',value:emp?emp.position:'',readOnly:true}))
         ),
@@ -574,12 +574,12 @@ function StatTable({emps,leaves,saveLeaves}){
       })));
   }
   return E('div',{className:'card'},
-    E('div',{className:'card-hdr'},'전 직원 연차 현황 ('+new Date().getFullYear()+' 기준, 누적·이월)'),
+    E('div',{className:'card-hdr'},'재직자 연차 현황 ('+new Date().getFullYear()+' 기준, 누적·이월)'),
     E('div',{style:{fontSize:11,color:'#94a3b8',padding:'0 16px 8px'}},'이름을 클릭하면 해당 직원의 전체 사용 이력이 펼쳐집니다.'),
     E('div',{style:{overflowX:'auto'}},
       E('table',null,
         E('thead',null,E('tr',null,['이름','부서','입사일','근속','보유','누적사용','중간정산','잔여','대기'].map(h=>E('th',{key:h},h)))),
-        E('tbody',null,emps.map(e=>{
+        E('tbody',null,emps.filter(e=>e.status!=='resigned').map(e=>{
           const b=balance(e,leaves);
           const open=openId===e.id;
           return E(React.Fragment,{key:e.id},
@@ -632,9 +632,33 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
   }
   async function delEmp(e){
     const cnt=leaves.filter(l=>l.emp===e.id).length;
-    if(!confirm(e.name+' 직원을 삭제합니다.'+(cnt?' 연차 기록 '+cnt+'건도 함께 삭제됩니다.':'')+'\n계속하시겠습니까?')) return;
+    if(!confirm(e.name+' 직원을 완전히 삭제합니다.'+(cnt?' 연차 기록 '+cnt+'건도 함께 삭제됩니다.':'')+'\n※ 퇴사한 직원은 삭제 대신 [퇴사] 버튼을 사용하세요 (기록 보존).\n삭제는 오입력 정리 용도로만 사용하세요. 계속하시겠습니까?')) return;
     await saveEmps(emps.filter(x=>x.id!==e.id));
     await saveLeaves(leaves.filter(l=>l.emp!==e.id));
+  }
+  // 퇴사 처리: 데이터는 보존하고 상태만 전환. 인사기록부(퇴사일·퇴사사유)와 자동 연동.
+  async function retireEmp(e){
+    const d=prompt(e.name+' 님의 퇴사일을 입력하세요 (YYYY-MM-DD)',today());
+    if(d===null) return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ alert('날짜 형식이 올바르지 않습니다. 예: 2026-08-31'); return; }
+    const reason=prompt('퇴사 사유 (인사기록부에 자동 기록됩니다. 비워도 됩니다)','');
+    if(reason===null) return;
+    await saveEmps(emps.map(x=>x.id===e.id?{...x,status:'resigned',resignDate:d}:x));
+    try{
+      const profs=(await dbGet('hr_profiles'))||{};
+      profs[e.id]={...(profs[e.id]||{}),name:e.name,resignDate:d};
+      await dbSet('hr_profiles',profs);
+      if(reason.trim()){
+        const recs=(await dbGet('hr_records'))||[];
+        recs.push({rid:uid(),emp:e.id,empName:e.name,date:d,kind:'퇴사사유',content:reason.trim(),writer:'관리자'});
+        await dbSet('hr_records',recs);
+      }
+    }catch(err){ console.error('인사기록부 연동 실패',err); }
+    alert(e.name+' 님을 퇴사 처리했습니다.\n연차 기록과 인사기록은 그대로 보관되며, 인사기록부의 퇴사자 그룹에서 볼 수 있습니다.');
+  }
+  async function rehireEmp(e){
+    if(!confirm(e.name+' 님을 재직 상태로 되돌립니까?')) return;
+    await saveEmps(emps.map(x=>x.id===e.id?{...x,status:null,resignDate:null}:x));
   }
   async function addPeriod(){
     const days=parseFloat(pDays);
@@ -652,6 +676,9 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
 
   const hist=leaves.filter(l=>l.imported).sort((a,b)=>(b.daysOnly?b.year:new Date(b.start).getFullYear())-(a.daysOnly?a.year:new Date(a.start).getFullYear()));
   const years=[];for(let y=new Date().getFullYear();y>=2010;y--)years.push(y);
+  const activeEmps=emps.filter(e=>e.status!=='resigned');
+  const resignedEmps=emps.filter(e=>e.status==='resigned');
+  const [showResigned,setShowResigned]=useState(false);
 
   return E(React.Fragment,null,
     // 직원 관리
@@ -665,8 +692,8 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
           E('div',{style:{minWidth:100}},E('span',{className:'lbl'},'부서'),E('input',{className:'inp',value:nDept,onChange:e=>setNDept(e.target.value),placeholder:'설계팀'})),
           E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'직위'),E('input',{className:'inp',value:nPos,onChange:e=>setNPos(e.target.value),placeholder:'사원'})),
           E('button',{className:'btn pri',onClick:addEmp},'직원 추가')),
-        E('div',{style:{fontSize:12,fontWeight:600,marginBottom:6}},'직원 목록 ('+emps.length+')'),
-        emps.map(e=>editId===e.id
+        E('div',{style:{fontSize:12,fontWeight:600,marginBottom:6}},'직원 목록 ('+activeEmps.length+')'),
+        activeEmps.map(e=>editId===e.id
           ? E('div',{key:e.id,style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'flex-end',padding:10,background:'#eff6ff',borderRadius:8,marginBottom:6}},
               E('div',{style:{flex:1,minWidth:90}},E('span',{className:'lbl'},'이름'),E('input',{className:'inp',value:eName,onChange:ev=>setEName(ev.target.value)})),
               E('div',{style:{minWidth:130}},E('span',{className:'lbl'},'입사일'),E('input',{type:'date',className:'inp',value:eHire,onChange:ev=>setEHire(ev.target.value)})),
@@ -681,8 +708,20 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
                 E('span',{style:{flex:1}},e.name+' · '+e.hire+' · '+e.dept+' '+e.position,
                   E('span',{style:{color:'#94a3b8'}},'  | 보유 '+fmtDays(b.total)+(b.hasOverride?'(수동)':'')+' · 잔여 '+fmtDays(b.remain)+(b.settle?' · 정산 '+fmtDays(b.settle):''))),
                 E('button',{className:'btn sm',onClick:()=>startEdit(e)},'수정'),
+                E('button',{className:'btn sm',style:{color:'#92400e'},onClick:()=>retireEmp(e)},'퇴사'),
                 E('button',{className:'btn sm dng',onClick:()=>delEmp(e)},'삭제'));
-            })())
+            })()),
+        resignedEmps.length>0&&E('div',{style:{marginTop:14,paddingTop:10,borderTop:'1px solid #e2e8f0'}},
+          E('button',{className:'btn sm',onClick:()=>setShowResigned(!showResigned)},(showResigned?'▾':'▸')+' 퇴사자 ('+resignedEmps.length+')'),
+          showResigned&&E('div',{style:{marginTop:8}},
+            E('div',{style:{fontSize:11,color:'#94a3b8',marginBottom:6}},'퇴사자의 연차 기록·인사기록은 그대로 보관됩니다. 상세는 인사기록부의 퇴사자 그룹에서 확인하세요.'),
+            resignedEmps.map(e=>{
+              const yrs=e.hire&&e.resignDate?Math.round((new Date(e.resignDate)-new Date(e.hire))/31557600000*10)/10:null;
+              return E('div',{key:e.id,style:{display:'flex',alignItems:'center',gap:8,fontSize:12,padding:'6px 0',borderBottom:'1px solid #f8fafc',color:'#64748b'}},
+                E('span',{style:{flex:1}},e.name+' · 입사 '+e.hire+' · 퇴사 '+(e.resignDate||'-')+(yrs!==null?' · 근속 약 '+yrs+'년':'')),
+                E('button',{className:'btn sm',onClick:()=>rehireEmp(e)},'복직'),
+                E('button',{className:'btn sm dng',onClick:()=>delEmp(e)},'삭제'));
+            })))
       )),
     // 과거 기록 입력
     E('div',{className:'card'},
@@ -723,8 +762,8 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
 
 // ── 인사기록부 (관리자 안 2차 관문) ──
 // 데이터: hr_profiles(직원별 인적사항), hr_records(인사기록). 직원 삭제 후에도 기록은 보관됨.
-const HR_KINDS=['징계','경고','포상','사고·이슈','면담','퇴사사유','기타'];
-const HR_KIND_BADGE={'징계':'b-red','경고':'b-amber','포상':'b-green','사고·이슈':'b-amber','면담':'b-blue','퇴사사유':'b-gray','기타':'b-gray'};
+const HR_KINDS=['징계','경고','포상','평가','사고·이슈','면담','퇴사사유','기타'];
+const HR_KIND_BADGE={'징계':'b-red','경고':'b-amber','포상':'b-green','평가':'b-blue','사고·이슈':'b-amber','면담':'b-blue','퇴사사유':'b-gray','기타':'b-gray'};
 
 // pdf.js 지연 로드 (엑셀 내보내기의 SheetJS와 같은 패턴)
 let PDFJS_P=null;
@@ -889,12 +928,13 @@ function HrPrint({emp,form,recs}){
       E('table',{style:{width:'100%',borderCollapse:'collapse'}},E('tbody',null,
         E('tr',null,['자격증명','취득연도'].map(h=>E('th',{key:h,style:{...th,width:'auto'}},h))),
         certs.map((c,i)=>E('tr',{key:i},E('td',{style:td},c.name),E('td',{style:{...td,textAlign:'center',width:'20%'}},c.year)))))),
-    sals.length>0&&E(React.Fragment,null,sec('연봉 이력'),
+    sals.length>0&&E(React.Fragment,null,sec('급여 이력'),
       E('table',{style:{width:'100%',borderCollapse:'collapse'}},E('tbody',null,
-        E('tr',null,['연도','연봉','비고'].map(h=>E('th',{key:h,style:{...th,width:'auto'}},h))),
+        E('tr',null,['연도','형태','금액','비고'].map(h=>E('th',{key:h,style:{...th,width:'auto'}},h))),
         sals.map((s,i)=>E('tr',{key:i},
-          E('td',{style:{...td,width:'15%',textAlign:'center'}},s.year),
-          E('td',{style:{...td,width:'35%'}},s.amount),
+          E('td',{style:{...td,width:'13%',textAlign:'center'}},s.year),
+          E('td',{style:{...td,width:'12%',textAlign:'center'}},s.stype||'연봉'),
+          E('td',{style:{...td,width:'32%'}},s.amount),
           E('td',{style:td},s.memo)))))),
     F('notes')&&E(React.Fragment,null,sec('특이사항'),
       E('div',{style:{border:'0.5px solid #888',padding:'6px 8px',fontSize:12,whiteSpace:'pre-wrap'}},F('notes'))),
@@ -914,8 +954,10 @@ function HrPrint({emp,form,recs}){
 function HrTab({emps}){
   const [profiles,setProfiles]=useState({});
   const [records,setRecords]=useState([]);
+  const [people,setPeople]=useState([]); // 인명부: 계약·일당직 (연차관리 미대상)
   const [loaded,setLoaded]=useState(false);
   const [selEmp,setSelEmp]=useState("");
+  const [npName,setNpName]=useState(""),[npType,setNpType]=useState("일당직"),[npPhone,setNpPhone]=useState("");
   const [form,setForm]=useState({});
   const [pmsg,setPmsg]=useState(null);
   const [parsing,setParsing]=useState(false);
@@ -926,18 +968,33 @@ function HrTab({emps}){
   const [rmsg,setRmsg]=useState(null);
 
   useEffect(()=>{
-    let u1,u2;
+    let u1,u2,u3;
     (async()=>{
-      const p=await dbGet('hr_profiles'); const r=await dbGet('hr_records');
-      setProfiles(p||{}); setRecords(r||[]); setLoaded(true);
+      const p=await dbGet('hr_profiles'); const r=await dbGet('hr_records'); const pp=await dbGet('hr_people');
+      setProfiles(p||{}); setRecords(r||[]); setPeople(pp||[]); setLoaded(true);
       u1=dbListen('hr_profiles',v=>setProfiles(v||{}));
       u2=dbListen('hr_records',v=>setRecords(v||[]));
+      u3=dbListen('hr_people',v=>setPeople(v||[]));
     })();
-    return ()=>{ u1&&u1(); u2&&u2(); };
+    return ()=>{ u1&&u1(); u2&&u2(); u3&&u3(); };
   },[]);
   useEffect(()=>{ setForm((profiles&&profiles[selEmp])||{}); setPmsg(null); setRmsg(null); },[selEmp,loaded]);
 
-  const emp=emps.find(e=>e.id===selEmp);
+  const person=people.find(p=>p.id===selEmp);
+  const emp=emps.find(e=>e.id===selEmp)||(person?{id:person.id,name:person.name,dept:'인명부',position:person.ptype||'일당직',hire:person.hire||'-'}:undefined);
+  async function addPerson(){
+    if(!npName.trim()){ alert('이름을 입력하세요.'); return; }
+    const p={id:uid(),name:npName.trim(),ptype:npType,phone:npPhone.trim()};
+    const next=[...people,p]; setPeople(next); await dbSet('hr_people',next);
+    if(p.phone){ const np={...profiles,[p.id]:{...(profiles[p.id]||{}),name:p.name,phone:p.phone}}; setProfiles(np); await dbSet('hr_profiles',np); }
+    setNpName("");setNpPhone("");
+    setSelEmp(p.id);
+  }
+  async function delPerson(p){
+    if(!confirm(p.name+' 님을 인명부에서 삭제합니다.\n인사기록은 이름과 함께 "삭제된 인원 기록"에 보관됩니다. 계속하시겠습니까?')) return;
+    const next=people.filter(x=>x.id!==p.id); setPeople(next); await dbSet('hr_people',next);
+    if(selEmp===p.id) setSelEmp('');
+  }
   const F=k=>(form[k]===undefined||form[k]===null)?'':form[k];
   const setF=(k,v)=>setForm(prev=>({...prev,[k]:v}));
   const fld=(label,key,type)=>E('div',null,E('span',{className:'lbl'},label),
@@ -968,14 +1025,17 @@ function HrTab({emps}){
       E('input',{className:'inp',style:{width:90,flex:'none'},placeholder:'취득연도',value:c.year||'',onChange:e=>listSet('certList',i,'year',e.target.value)}),
       E('button',{className:'btn sm dng',onClick:()=>listDel('certList',i)},'삭제'))));
   const salaries=Array.isArray(form.salaries)?form.salaries:[];
+  const defStype=person?(person.ptype==='계약직'?'월급':'일당'):'연봉';
   const salBlock=E('div',{style:{marginBottom:12}},
     E('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:6}},
-      E('span',{className:'lbl',style:{marginBottom:0}},'연봉 이력 (연도별)'),
-      E('button',{className:'btn sm',onClick:()=>listAdd('salaries',{year:String(new Date().getFullYear()),amount:'',memo:''})},'＋ 연봉 추가')),
-    salaries.length===0&&E('div',{style:{fontSize:11,color:'#94a3b8'}},'등록된 연봉 이력이 없습니다. [＋ 연봉 추가]를 누르세요.'),
+      E('span',{className:'lbl',style:{marginBottom:0}},'급여 이력 (연봉·월급·일당, 연도별)'),
+      E('button',{className:'btn sm',onClick:()=>listAdd('salaries',{year:String(new Date().getFullYear()),stype:defStype,amount:'',memo:''})},'＋ 급여 추가')),
+    salaries.length===0&&E('div',{style:{fontSize:11,color:'#94a3b8'}},'등록된 급여 이력이 없습니다. [＋ 급여 추가]를 누르세요.'),
     salaries.map((s,i)=>E('div',{key:'sl'+i,style:{display:'flex',gap:6,marginBottom:6,alignItems:'center'}},
-      E('input',{className:'inp',style:{width:90,flex:'none'},placeholder:'연도',value:s.year||'',onChange:e=>listSet('salaries',i,'year',e.target.value)}),
-      E('input',{className:'inp',style:{flex:2},placeholder:'연봉 (예: 3,600만원)',value:s.amount||'',onChange:e=>listSet('salaries',i,'amount',e.target.value)}),
+      E('input',{className:'inp',style:{width:80,flex:'none'},placeholder:'연도',value:s.year||'',onChange:e=>listSet('salaries',i,'year',e.target.value)}),
+      E('select',{className:'inp',style:{width:80,flex:'none'},value:s.stype||'연봉',onChange:e=>listSet('salaries',i,'stype',e.target.value)},
+        ['연봉','월급','일당'].map(t=>E('option',{key:t,value:t},t))),
+      E('input',{className:'inp',style:{flex:2},placeholder:'금액 (예: 3,600만원 / 일 15만원)',value:s.amount||'',onChange:e=>listSet('salaries',i,'amount',e.target.value)}),
       E('input',{className:'inp',style:{flex:2},placeholder:'비고 (예: 진급 인상)',value:s.memo||'',onChange:e=>listSet('salaries',i,'memo',e.target.value)}),
       E('button',{className:'btn sm dng',onClick:()=>listDel('salaries',i)},'삭제'))));
 
@@ -1017,7 +1077,7 @@ function HrTab({emps}){
 
   if(!loaded) return E('div',{style:{color:'#94a3b8',padding:20}},'인사 데이터 불러오는 중...');
   const empRecs=records.filter(r=>r.emp===selEmp).sort((a,b)=>a.date<b.date?1:-1);
-  const orphans=records.filter(r=>!emps.find(e=>e.id===r.emp)).sort((a,b)=>a.date<b.date?1:-1);
+  const orphans=records.filter(r=>!emps.find(e=>e.id===r.emp)&&!people.find(p=>p.id===r.emp)).sort((a,b)=>a.date<b.date?1:-1);
 
   return E(React.Fragment,null,
     E('div',{className:'card'},
@@ -1027,10 +1087,23 @@ function HrTab({emps}){
           E('label',{className:'btn sm',style:{cursor:'pointer'}},parsing?'⏳ PDF 읽는 중...':'📄 이력서 PDF 자동입력',
             E('input',{type:'file',accept:'application/pdf,.pdf',style:{display:'none'},onChange:onResume,disabled:parsing})))),
       E('div',{className:'card-bd'},
-        E('div',{style:{marginBottom:12,maxWidth:300}},E('span',{className:'lbl'},'직원 선택'),
+        E('div',{style:{marginBottom:10,maxWidth:320}},E('span',{className:'lbl'},'인원 선택'),
           E('select',{className:'inp',value:selEmp,onChange:e=>setSelEmp(e.target.value)},
-            E('option',{value:''},'직원을 선택하세요'),
-            emps.map(e=>E('option',{key:e.id,value:e.id},e.name+' ('+e.dept+' '+e.position+')')))),
+            E('option',{value:''},'인원을 선택하세요'),
+            E('optgroup',{label:'재직자'},
+              emps.filter(e=>e.status!=='resigned').map(e=>E('option',{key:e.id,value:e.id},e.name+' ('+e.dept+' '+e.position+')'))),
+            people.length>0&&E('optgroup',{label:'계약·일당직 (인명부)'},
+              people.map(p=>E('option',{key:p.id,value:p.id},p.name+' ('+(p.ptype||'일당직')+')'))),
+            emps.some(e=>e.status==='resigned')&&E('optgroup',{label:'퇴사자'},
+              emps.filter(e=>e.status==='resigned').map(e=>E('option',{key:e.id,value:e.id},e.name+' (퇴사 '+(e.resignDate||'-')+')'))))),
+        E('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'flex-end',padding:'8px 10px',background:'#f8fafc',borderRadius:8,marginBottom:12}},
+          E('div',{style:{flex:1,minWidth:100}},E('span',{className:'lbl'},'인명부 인원 추가 — 이름'),E('input',{className:'inp',value:npName,onChange:e=>setNpName(e.target.value),placeholder:'홍길동'})),
+          E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'구분'),
+            E('select',{className:'inp',value:npType,onChange:e=>setNpType(e.target.value)},
+              E('option',{value:'일당직'},'일당직'),E('option',{value:'계약직'},'계약직'))),
+          E('div',{style:{minWidth:130}},E('span',{className:'lbl'},'연락처(선택)'),E('input',{className:'inp',value:npPhone,onChange:e=>setNpPhone(e.target.value),placeholder:'010-0000-0000'})),
+          E('button',{className:'btn sm pri',onClick:addPerson},'＋ 추가'),
+          E('div',{style:{width:'100%',fontSize:10,color:'#94a3b8'}},'연차관리 화면에는 나타나지 않고 인사기록부에서만 관리됩니다. 연차를 쓰는 직원은 직원·기록 관리에서 등록하세요.')),
         !selEmp
           ? E('div',{style:{color:'#94a3b8',fontSize:12,padding:'6px 0'}},'직원을 선택하면 인적사항·인사기록이 표시됩니다. 표준 양식 이력서 PDF를 올리면 항목이 자동으로 채워집니다.')
           : E(React.Fragment,null,
@@ -1063,7 +1136,9 @@ function HrTab({emps}){
                 fld('외국인등록번호','foreignRegNo')),
               E('div',{style:{marginBottom:12}},E('span',{className:'lbl'},'특이사항 (자유롭게 — 칸은 자동으로 늘어남)'),
                 E(AutoTA,{value:F('notes'),onChange:e=>setF('notes',e.target.value)})),
-              E('button',{className:'btn pri',onClick:saveProfile},'💾 인적사항 저장'),
+              E('div',{style:{display:'flex',gap:8}},
+                E('button',{className:'btn pri',onClick:saveProfile},'💾 인적사항 저장'),
+                person&&E('button',{className:'btn dng',onClick:()=>delPerson(person)},'인명부에서 삭제')),
               pmsg&&E('div',{style:{fontSize:12,marginTop:10,color:pmsg.c}},pmsg.t)
             ))),
     E('div',{className:'card'},
@@ -1088,7 +1163,7 @@ function HrTab({emps}){
                     E('span',{style:{color:'#94a3b8'}},r.writer),
                     E('button',{className:'btn sm dng',onClick:()=>delRecord(r)},'삭제')))),
         orphans.length>0&&E('div',{style:{marginTop:16,paddingTop:12,borderTop:'1px solid #e2e8f0'}},
-          E('div',{style:{fontSize:12,fontWeight:600,marginBottom:6}},'퇴사·삭제된 직원의 기록 ('+orphans.length+') — 직원을 삭제해도 인사기록은 보관됩니다'),
+          E('div',{style:{fontSize:12,fontWeight:600,marginBottom:6}},'삭제된 인원의 기록 ('+orphans.length+') — 완전 삭제해도 인사기록은 보관됩니다'),
           orphans.map(r=>E('div',{key:r.rid,style:{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:'1px solid #f8fafc',fontSize:12}},
             E('span',{style:{color:'#64748b',minWidth:78}},r.date),
             E('span',{style:{fontWeight:500,minWidth:56}},r.empName||'(미상)'),
