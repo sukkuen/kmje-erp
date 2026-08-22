@@ -159,6 +159,21 @@ function balance(emp, leaves){
   return {total, auto, hasOverride, used, settle, remain, pending, years:ent.years, months:ent.months};
 }
 const yLabel = b => b.months<12 ? b.months+'개월' : b.years+'년';
+// 직원 정렬: 임원 먼저 → 부서 가나다순 → 부서 안에서 직위 순 → 이름 가나다순
+const DEPT_FIRST=['임원'];
+const POS_RANK=['대표','대표이사','부사장','전무','상무','이사','부장','차장','과장','대리','주임','사원'];
+function sortEmps(list){
+  const posR=p=>{const i=POS_RANK.indexOf(p);return i===-1?99:i;};
+  return [...list].sort((a,b)=>{
+    const da=a.dept||'-', db=b.dept||'-';
+    const fa=DEPT_FIRST.indexOf(da), fb=DEPT_FIRST.indexOf(db);
+    if(fa!==fb){ if(fa===-1) return 1; if(fb===-1) return -1; return fa-fb; }
+    if(da!==db){ if(da==='-') return 1; if(db==='-') return -1; return da.localeCompare(db,'ko'); }
+    const ra=posR(a.position), rb=posR(b.position);
+    if(ra!==rb) return ra-rb;
+    return (a.name||'').localeCompare(b.name||'','ko');
+  });
+}
 // 일수(소수) → '26일 4h' 표기 (1일=8시간)
 function fmtDays(d){
   if(d===null||d===undefined||isNaN(d)) return '-';
@@ -215,15 +230,16 @@ function App(){
       let l=await dbGet('leave_records');
       if(!e){ e=SEED_EMP; await dbSet('leave_employees',e); }
       if(!l){ l=[]; await dbSet('leave_records',l); }
-      setEmps(e); setLeaves(l); setLoaded(true);
+      setEmps(sortEmps(e)); setLeaves(l); setLoaded(true);
       setLive(!!db);
-      unsubE=dbListen('leave_employees',v=>setEmps(v||[]));
+      unsubE=dbListen('leave_employees',v=>setEmps(sortEmps(v||[])));
       unsubL=dbListen('leave_records',v=>setLeaves(v||[]));
     })();
     return ()=>{ unsubE&&unsubE(); unsubL&&unsubL(); };
   },[]);
 
-  const saveEmps=async(next)=>{ setEmps(next); await dbSet('leave_employees',next); };
+  // 직원 명부는 항상 정렬된 순서(임원→부서 가나다→직위→이름)로 유지·저장 → 모든 화면이 같은 순서
+  const saveEmps=async(next)=>{ const s=sortEmps(next); setEmps(s); await dbSet('leave_employees',s); };
   const saveLeaves=async(next)=>{ setLeaves(next); await dbSet('leave_records',next); };
 
   if(!loaded) return E('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'#64748b'}},'데이터 불러오는 중...');
@@ -1090,12 +1106,16 @@ function HrTab({emps}){
         E('div',{style:{marginBottom:10,maxWidth:320}},E('span',{className:'lbl'},'인원 선택'),
           E('select',{className:'inp',value:selEmp,onChange:e=>setSelEmp(e.target.value)},
             E('option',{value:''},'인원을 선택하세요'),
-            E('optgroup',{label:'재직자'},
-              emps.filter(e=>e.status!=='resigned').map(e=>E('option',{key:e.id,value:e.id},e.name+' ('+e.dept+' '+e.position+')'))),
+            (()=>{ // 재직자: 부서별 그룹 (임원 → 부서 가나다 → 직위 순)
+              const sorted=sortEmps(emps.filter(e=>e.status!=='resigned'));
+              const depts=[...new Set(sorted.map(e=>e.dept||'-'))];
+              return depts.map(d=>E('optgroup',{key:'d'+d,label:'재직자 · '+d},
+                sorted.filter(e=>(e.dept||'-')===d).map(e=>E('option',{key:e.id,value:e.id},e.name+(e.position&&e.position!=='-'?' ('+e.position+')':'')))));
+            })(),
             people.length>0&&E('optgroup',{label:'계약·일당직 (인명부)'},
-              people.map(p=>E('option',{key:p.id,value:p.id},p.name+' ('+(p.ptype||'일당직')+')'))),
+              [...people].sort((a,b)=>(a.ptype||'').localeCompare(b.ptype||'','ko')||(a.name||'').localeCompare(b.name||'','ko')).map(p=>E('option',{key:p.id,value:p.id},p.name+' ('+(p.ptype||'일당직')+')'))),
             emps.some(e=>e.status==='resigned')&&E('optgroup',{label:'퇴사자'},
-              emps.filter(e=>e.status==='resigned').map(e=>E('option',{key:e.id,value:e.id},e.name+' (퇴사 '+(e.resignDate||'-')+')'))))),
+              sortEmps(emps.filter(e=>e.status==='resigned')).map(e=>E('option',{key:e.id,value:e.id},e.name+' · '+(e.dept||'-')+' (퇴사 '+(e.resignDate||'-')+')'))))),
         E('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'flex-end',padding:'8px 10px',background:'#f8fafc',borderRadius:8,marginBottom:12}},
           E('div',{style:{flex:1,minWidth:100}},E('span',{className:'lbl'},'인명부 인원 추가 — 이름'),E('input',{className:'inp',value:npName,onChange:e=>setNpName(e.target.value),placeholder:'홍길동'})),
           E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'구분'),
