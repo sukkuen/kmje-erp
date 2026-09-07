@@ -63,6 +63,12 @@ tbody tr:hover td{background:#f8fafc;}
 .cal-hol{font-size:9px;color:#dc2626;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-chip{font-size:10px;line-height:1.5;padding:1px 6px;border-radius:5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 @media(max-width:640px){.cal-cell{min-height:60px;padding:3px;}.cal-chip{font-size:9px;padding:1px 3px;}.cal-day{font-size:10px;}}
+.mg{border-collapse:collapse;font-size:10px;white-space:nowrap;}
+.mg th,.mg td{border:1px solid #e2e8f0;padding:2px 3px;text-align:center;min-width:21px;}
+.mg th{background:#f8fafc;color:#64748b;font-weight:600;}
+.mg td.we,.mg th.we{background:#fff5f5;}
+.mg td.nm,.mg th.nm{min-width:60px;font-weight:600;text-align:left;padding-left:6px;position:sticky;left:0;background:#fff;}
+.mg td.tot{background:#eff6ff;font-weight:600;}
 .print-only{display:none;}
 @media print{
   body *{visibility:hidden;}
@@ -204,6 +210,59 @@ function hoursBetween(s,e){
 }
 // 시각 선택용 정시 목록 (06:00 ~ 22:00, 분 단위 없음)
 const HOUR_OPTS=(()=>{const a=[];for(let h=6;h<=22;h++)a.push((h<10?'0'+h:h)+':00');return a;})();
+
+// ── 식비 지원 (2026-10 시행 기준안) ──
+const MEAL_PRICE=8000; // 1식 지원금
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+// 하루 식비 판정 (규정 → 코드).
+// emp: {isOffice,isDorm} / isHol: 토·일·공휴일 여부
+// lv: {full:종일연차, hours:시간차 시간수}
+// ent: {eo:조출시간, ot:잔업시간, wh:휴일근무시간, absent:결근, cl:회사중식제공, cd:회사석식제공}
+function mealCalc(emp,isHol,lv,ent){
+  ent=ent||{}; lv=lv||{};
+  if(isHol){
+    const wh=Number(ent.wh)||0, ot=Number(ent.ot)||0;
+    if(wh<=0&&ot<=0) return {meals:0,code:'/'};             // 휴일 미근무
+    const lunch=(emp.isOffice?wh>0:wh>=5)&&!ent.cl;         // 중식: 사무실 출근만 해도 / 현장 5시간 이상
+    const dinner=ot>0&&!ent.cd;                             // 석식: 휴일 잔업 시 지급 (기숙사 무관)
+    const code='휴'+(wh||0)+(ot>0?'잔'+ot:'');
+    return {meals:(lunch?1:0)+(dinner?1:0),code};
+  }
+  if(ent.absent) return {meals:0,code:'결'};                 // 결근: 기숙사 석식비도 없음
+  if(lv.full) return {meals:0,code:'연'};                    // 종일 연차: 기숙사 석식비도 없음
+  const h=(lv.hours!=null)?Number(lv.hours):null;
+  const eo=Number(ent.eo)||0, ot=Number(ent.ot)||0;
+  const parts=[]; if(h!=null)parts.push('시'+h); if(eo>0)parts.push('조'+eo); if(ot>0)parts.push('잔'+ot);
+  const code=parts.length?parts.join(''):'○';
+  if(h!=null&&h>3) return {meals:0,code};                   // 3시간 초과 시간차·반차: 중식·기숙사 석식 모두 미지원
+  const lunch=!ent.cl;                                      // 회사 중식 제공 시 미지급
+  const dinner=(ot>0||emp.isDorm)&&!ent.cd;                 // 석식: 잔업자 + 기숙사(정상 출근한 평일 상시 지급). 조출은 식비 무관
+  const meals=(lunch?1:0)+(dinner?1:0);
+  return {meals,code};
+}
+// SheetJS 지연 로드 (엑셀 내보내기)
+let XLSX_P=null;
+function loadXlsx(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(XLSX_P) return XLSX_P;
+  XLSX_P=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>res(window.XLSX);
+    s.onerror=()=>rej(new Error('엑셀 모듈 로드 실패 (인터넷 연결 확인)'));
+    document.head.appendChild(s);
+  });
+  return XLSX_P;
+}
+// 출근대장 인쇄: 가로(landscape)로 출력
+function printLandscape(){
+  const st=document.createElement('style'); st.id='pg-land';
+  st.textContent='@page{size:A4 landscape;margin:8mm;}';
+  document.head.appendChild(st);
+  const clean=()=>{ const s=document.getElementById('pg-land'); s&&s.remove(); window.removeEventListener('afterprint',clean); };
+  window.addEventListener('afterprint',clean);
+  window.print();
+}
 
 // 초기 시드 (Firebase에 데이터 없을 때만 사용)
 const SEED_EMP = [
@@ -523,9 +582,11 @@ function AdminTab({emps,leaves,saveEmps,saveLeaves}){
     E('div',{style:{display:'flex',gap:8,marginBottom:16}},
       E('button',{className:'btn'+(sub==='work'?' pri':''),onClick:()=>setSub('work')},'📨 결재·현황'),
       E('button',{className:'btn'+(sub==='manage'?' pri':''),onClick:()=>setSub('manage')},'⚙️ 직원·기록 관리'),
+      E('button',{className:'btn'+(sub==='meal'?' pri':''),onClick:()=>setSub('meal')},'🍚 출근·식비'),
       E('button',{className:'btn'+(sub==='hr'?' pri':''),onClick:()=>setSub('hr')},'🗂️ 인사기록부')),
     sub==='work'?E(AdminWork,{emps,leaves,saveLeaves})
     :sub==='manage'?E(AdminManage,{emps,leaves,saveEmps,saveLeaves})
+    :sub==='meal'?E(MealTab,{emps,leaves})
     :hrAuthed?E(HrTab,{emps})
     :E('div',{className:'card'},E('div',{className:'card-bd',style:{maxWidth:340,margin:'0 auto',textAlign:'center'}},
         E('div',{style:{fontSize:26,marginBottom:6}},'🗂️'),
@@ -625,6 +686,7 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
   const [nName,setNName]=useState(""),[nHire,setNHire]=useState(""),[nDept,setNDept]=useState(""),[nPos,setNPos]=useState("");
   const [eName,setEName]=useState(""),[eHire,setEHire]=useState(""),[eDept,setEDept]=useState(""),[ePos,setEPos]=useState("");
   const [eHold,setEHold]=useState(""),[eSettle,setESettle]=useState("");
+  const [eOffice,setEOffice]=useState(false),[eDorm,setEDorm]=useState(false);
   const [hmode,setHmode]=useState("period");
   // 기간형
   const [pEmp,setPEmp]=useState(""),[pStart,setPStart]=useState(""),[pEnd,setPEnd]=useState(""),[pDays,setPDays]=useState(""),[pReason,setPReason]=useState("");
@@ -637,12 +699,13 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
     await saveEmps([...emps,{id:uid(),name:nName,hire:nHire,dept:nDept||'-',position:nPos||'-'}]);
     setNName("");setNHire("");setNDept("");setNPos("");
   }
-  function startEdit(e){ setEditId(e.id);setEName(e.name);setEHire(e.hire);setEDept(e.dept);setEPos(e.position);setEHold(e.holdOverride!==undefined&&e.holdOverride!==null?String(e.holdOverride):"");setESettle(e.settle?String(e.settle):""); }
+  function startEdit(e){ setEditId(e.id);setEName(e.name);setEHire(e.hire);setEDept(e.dept);setEPos(e.position);setEHold(e.holdOverride!==undefined&&e.holdOverride!==null?String(e.holdOverride):"");setESettle(e.settle?String(e.settle):"");setEOffice(!!e.isOffice);setEDorm(!!e.isDorm); }
   async function saveEdit(){
     if(!eName||!eHire){ alert('이름과 입사일은 비울 수 없습니다.'); return; }
     const patch={name:eName,hire:eHire,dept:eDept||'-',position:ePos||'-'};
     patch.holdOverride = (eHold===''||eHold===null) ? null : Number(eHold);
     patch.settle = (eSettle===''||eSettle===null) ? 0 : Number(eSettle);
+    patch.isOffice=eOffice; patch.isDorm=eDorm;
     await saveEmps(emps.map(x=>x.id===editId?{...x,...patch}:x));
     setEditId(null);
   }
@@ -717,11 +780,17 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
               E('div',{style:{minWidth:80}},E('span',{className:'lbl'},'직위'),E('input',{className:'inp',value:ePos,onChange:ev=>setEPos(ev.target.value)})),
               E('div',{style:{minWidth:110}},E('span',{className:'lbl'},'보유연차(비우면 자동)'),E('input',{type:'number',step:0.5,className:'inp',value:eHold,onChange:ev=>setEHold(ev.target.value),placeholder:'자동: '+fmtDays(autoHold(eHire||e.hire))})),
               E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'중간정산'),E('input',{type:'number',step:0.5,className:'inp',value:eSettle,onChange:ev=>setESettle(ev.target.value),placeholder:'0'})),
+              E('label',{style:{fontSize:12,display:'inline-flex',alignItems:'center',gap:4,padding:'6px 0'}},
+                E('input',{type:'checkbox',checked:eOffice,onChange:ev=>setEOffice(ev.target.checked)}),'사무실'),
+              E('label',{style:{fontSize:12,display:'inline-flex',alignItems:'center',gap:4,padding:'6px 0'}},
+                E('input',{type:'checkbox',checked:eDorm,onChange:ev=>setEDorm(ev.target.checked)}),'기숙사'),
               E('button',{className:'btn sm grn',onClick:saveEdit},'저장'),
               E('button',{className:'btn sm',onClick:()=>setEditId(null)},'취소'))
           : (()=>{ const b=balance(e,leaves);
               return E('div',{key:e.id,style:{display:'flex',alignItems:'center',gap:8,fontSize:12,padding:'7px 0',borderBottom:'1px solid #f1f5f9'}},
                 E('span',{style:{flex:1}},e.name+' · '+e.hire+' · '+e.dept+' '+e.position,
+                  e.isOffice?E('span',{className:'badge b-blue',style:{marginLeft:6}},'사무실'):null,
+                  e.isDorm?E('span',{className:'badge b-green',style:{marginLeft:4}},'기숙사'):null,
                   E('span',{style:{color:'#94a3b8'}},'  | 보유 '+fmtDays(b.total)+(b.hasOverride?'(수동)':'')+' · 잔여 '+fmtDays(b.remain)+(b.settle?' · 정산 '+fmtDays(b.settle):''))),
                 E('button',{className:'btn sm',onClick:()=>startEdit(e)},'수정'),
                 E('button',{className:'btn sm',style:{color:'#92400e'},onClick:()=>retireEmp(e)},'퇴사'),
@@ -1195,6 +1264,235 @@ function HrTab({emps}){
           '* 표준 양식이 아닌 과거 이력서는 일부만 자동 인식되므로 나머지는 직접 입력하세요.',E('br'),
           '* 인사기록은 직원 삭제 후에도 이름과 함께 보관됩니다.'))),
     selEmp&&emp&&E(HrPrint,{emp,form,recs:empRecs}));
+}
+
+// ── 출근·식비 탭 (관리자/경리 전용) ──
+// 평일은 전원 정상근무(중식 1식)로 자동 가정하고, 예외(잔업·결근·휴일근무·회사 식사 제공)만 입력한다.
+// 연차·시간차는 연차 기록에서, 토·공휴일은 공휴일 표에서 자동 반영된다. 데이터 키: meal_YYYY-MM
+function MealTab({emps,leaves}){
+  const now=new Date();
+  const [cur,setCur]=useState(new Date(now.getFullYear(),now.getMonth(),1));
+  const y=cur.getFullYear(), m=cur.getMonth();
+  const ymKey=y+'-'+String(m+1).padStart(2,'0');
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const [att,setAtt]=useState({});
+  const [loaded,setLoaded]=useState(false);
+  const [selDate,setSelDate]=useState(()=>{const t=ymd(now);return t;});
+  const [xmsg,setXmsg]=useState(null);
+
+  useEffect(()=>{
+    let un; setLoaded(false);
+    (async()=>{
+      const v=await dbGet('meal_'+ymKey);
+      setAtt(v||{}); setLoaded(true);
+      un=dbListen('meal_'+ymKey,d=>setAtt(d||{}));
+    })();
+    return ()=>{ un&&un(); };
+  },[ymKey]);
+
+  const activeEmps=emps.filter(e=>e.status!=='resigned');
+  const isHol=(ds,dt)=>{const w=dt.getDay();return w===0||w===6||!!HOLIDAYS[ds];};
+  // 승인된 연차 → 날짜별 맵 {dateStr:{empId:{full,hours}}}
+  const lvMap={};
+  leaves.filter(l=>l.status==='approved'&&!l.daysOnly&&l.start).forEach(l=>{
+    if(l.type==='hour'){
+      const mm=lvMap[l.start]=lvMap[l.start]||{};
+      const c=mm[l.emp]=mm[l.emp]||{full:false,hours:0};
+      c.hours=(c.hours||0)+(l.hours||Math.round((l.days||0)*HPD));
+    } else {
+      let d=new Date(l.start); const end=new Date(l.end||l.start);
+      while(d<=end){ const ds=ymd(d); const mm=lvMap[ds]=lvMap[ds]||{}; mm[l.emp]={...(mm[l.emp]||{}),full:true}; d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1); }
+    }
+  });
+  const entOf=(empId,ds)=>(att[empId]||{})[ds];
+  const lvOf=(empId,ds)=>(lvMap[ds]||{})[empId];
+  async function setEntry(empId,ds,patch){
+    const mo={...att}; const em={...(mo[empId]||{})};
+    const c={...(em[ds]||{}),...patch};
+    Object.keys(c).forEach(k=>{ if(!c[k]) delete c[k]; });
+    if(Object.keys(c).length===0) delete em[ds]; else em[ds]=c;
+    if(Object.keys(em).length===0) delete mo[empId]; else mo[empId]=em;
+    setAtt(mo); await dbSet('meal_'+ymKey,mo);
+  }
+  function dayCell(emp,d){
+    const ds=ymKey+'-'+String(d).padStart(2,'0');
+    const dt=new Date(y,m,d);
+    return mealCalc(emp,isHol(ds,dt),lvOf(emp.id,ds),entOf(emp.id,ds));
+  }
+  function monthStats(emp){
+    let meals=0,workD=0,eoH=0,otH=0,lvD=0;
+    for(let d=1;d<=daysInMonth;d++){
+      const ds=ymKey+'-'+String(d).padStart(2,'0');
+      const dt=new Date(y,m,d), hol=isHol(ds,dt);
+      const lv=lvOf(emp.id,ds), ent=entOf(emp.id,ds);
+      meals+=mealCalc(emp,hol,lv,ent).meals;
+      if(hol){
+        if(ent&&(Number(ent.wh)>0||Number(ent.ot)>0)) workD++;
+        if(ent) otH+=Number(ent.ot)||0;
+      }
+      else {
+        if(!(ent&&ent.absent)&&!(lv&&lv.full)) workD++;
+        if(ent){ eoH+=Number(ent.eo)||0; otH+=Number(ent.ot)||0; }
+        if(lv&&lv.full) lvD++;
+      }
+    }
+    return {meals,workD,eoH:Math.round(eoH*10)/10,otH:Math.round(otH*10)/10,lvD,amount:meals*MEAL_PRICE};
+  }
+  async function exportXlsx(){
+    try{
+      setXmsg({t:'엑셀 생성 중...',c:'#64748b'});
+      const X=await loadXlsx();
+      const days=[]; for(let d=1;d<=daysInMonth;d++) days.push(d);
+      const header=['이름','부서','사무실','기숙사',...days.map(d=>d+'일'),'출근일','조출(h)','잔업(h)','연차일','식수','식비(원)'];
+      const rows=activeEmps.map(e=>{
+        const st=monthStats(e);
+        return [e.name,e.dept,e.isOffice?'O':'',e.isDorm?'O':'',
+          ...days.map(d=>dayCell(e,d).code),
+          st.workD,st.eoH,st.otH,st.lvD,st.meals,st.amount];
+      });
+      const total=activeEmps.reduce((s,e)=>{const st=monthStats(e);return {meals:s.meals+st.meals,amt:s.amt+st.amount};},{meals:0,amt:0});
+      const aoa=[['출근대장 '+y+'년 '+(m+1)+'월  (1식 '+MEAL_PRICE.toLocaleString()+'원 · ○정상 조n:조출 잔n:잔업 시n:시간차 연:연차 결:결근 휴n:휴일근무 /:휴무)'],header,...rows,
+        [],['합계','','','',...days.map(()=>''),'','','','',total.meals,total.amt]];
+      const ws=X.utils.aoa_to_sheet(aoa);
+      const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,ymKey);
+      X.writeFile(wb,'출근대장_'+ymKey+'.xlsx');
+      setXmsg({t:'엑셀 파일이 다운로드되었습니다.',c:'#166534'});
+    }catch(e){ console.error(e); setXmsg({t:'엑셀 내보내기 실패: '+e.message,c:'#dc2626'}); }
+  }
+  const shift=n=>{const nd=new Date(y,m+n,1);setCur(nd);setSelDate(ymd(nd));};
+
+  if(!loaded) return E('div',{style:{color:'#94a3b8',padding:20}},'출근 데이터 불러오는 중...');
+
+  // ── 일별 입력 패널 ──
+  const selDt=new Date(selDate+'T00:00:00');
+  const selValid=!isNaN(selDt)&&selDt.getFullYear()===y&&selDt.getMonth()===m;
+  const selHol=selValid&&isHol(selDate,selDt);
+  const dailyPanel=E('div',{className:'card'},
+    E('div',{className:'card-hdr'},'✏️ 일별 입력',
+      E('input',{type:'date',className:'inp',style:{width:150},value:selDate,
+        onChange:e=>{const v=e.target.value; if(!v) return; setSelDate(v); const nd=new Date(v+'T00:00:00'); if(nd.getFullYear()!==y||nd.getMonth()!==m) setCur(new Date(nd.getFullYear(),nd.getMonth(),1));}})),
+    E('div',{className:'card-bd'},
+      !selValid?E('div',{style:{color:'#94a3b8',fontSize:12}},'날짜를 선택하세요.')
+      :E(React.Fragment,null,
+        E('div',{style:{fontSize:12,marginBottom:10,color:selHol?'#dc2626':'#64748b'}},
+          selDate+' ('+['일','월','화','수','목','금','토'][selDt.getDay()]+') '
+          +(HOLIDAYS[selDate]?'· '+HOLIDAYS[selDate]+' ':'')
+          +(selHol?'— 휴일: 근무한 사람만 시간을 입력하세요 (현장 5시간 이상 1식, 사무실 출근 시 1식)':'— 평일: 기본 정상근무(1식). 예외만 체크하세요')),
+        E('div',{style:{overflowX:'auto'}},
+          E('table',null,
+            E('thead',null,E('tr',null,
+              ['이름','자동 반영',...(selHol?['근무시간(h)','잔업(h)','회사 중식','회사 석식']:['조출(h)','잔업(h)','결근','회사 중식','회사 석식']),'판정'].map(h=>E('th',{key:h},h)))),
+            E('tbody',null,activeEmps.map(e=>{
+              const ent=entOf(e.id,selDate)||{};
+              const lv=lvOf(e.id,selDate);
+              const r=mealCalc(e,selHol,lv,ent);
+              const auto=lv?(lv.full?'연차':'시간차 '+lv.hours+'h'):(e.isDorm?'기숙사':'')+(e.isOffice?(e.isDorm?'·':'')+'사무실':'');
+              const chk=(key)=>E('input',{type:'checkbox',checked:!!ent[key],onChange:ev=>setEntry(e.id,selDate,{[key]:ev.target.checked?1:0})});
+              const hrs=(key)=>E('input',{type:'number',min:0,max:12,step:0.5,className:'inp',style:{width:64},value:ent[key]||'',placeholder:'0',
+                onChange:ev=>setEntry(e.id,selDate,{[key]:ev.target.value===''?0:Number(ev.target.value)})});
+              return E('tr',{key:e.id},
+                E('td',{style:{fontWeight:500}},e.name),
+                E('td',{style:{color:'#94a3b8',fontSize:11}},auto||'-'),
+                selHol
+                  ? E(React.Fragment,null,
+                      E('td',null,E('input',{type:'number',min:0,max:24,step:0.5,className:'inp',style:{width:70},value:ent.wh||'',placeholder:'0',
+                        onChange:ev=>setEntry(e.id,selDate,{wh:ev.target.value===''?0:Number(ev.target.value)})})),
+                      E('td',null,hrs('ot')),
+                      E('td',{style:{textAlign:'center'}},chk('cl')),
+                      E('td',{style:{textAlign:'center'}},chk('cd')))
+                  : E(React.Fragment,null,
+                      E('td',null,hrs('eo')),
+                      E('td',null,hrs('ot')),
+                      E('td',{style:{textAlign:'center'}},chk('absent')),
+                      E('td',{style:{textAlign:'center'}},chk('cl')),
+                      E('td',{style:{textAlign:'center'}},chk('cd'))),
+                E('td',{style:{textAlign:'center',fontWeight:600,color:r.meals>0?'#166534':'#94a3b8'}},r.meals+'식'));
+            }))))
+      )));
+
+  // ── 월간 대장 ──
+  const days=[]; for(let d=1;d<=daysInMonth;d++) days.push(d);
+  const totals=activeEmps.map(e=>monthStats(e));
+  const grand=totals.reduce((s,t)=>({meals:s.meals+t.meals,amt:s.amt+t.amount}),{meals:0,amt:0});
+  const grid=E('div',{className:'card'},
+    E('div',{className:'card-hdr'},
+      E('span',null,
+        E('button',{className:'btn sm',onClick:()=>shift(-1)},'‹'),
+        E('span',{style:{margin:'0 10px'}},y+'년 '+(m+1)+'월 출근대장'),
+        E('button',{className:'btn sm',onClick:()=>shift(1)},'›'),
+        E('button',{className:'btn sm',style:{marginLeft:6},onClick:()=>{setCur(new Date(now.getFullYear(),now.getMonth(),1));setSelDate(ymd(now));}},'오늘')),
+      E('span',{style:{display:'flex',gap:8}},
+        E('button',{className:'btn sm',onClick:exportXlsx},'📊 엑셀'),
+        E('button',{className:'btn sm',onClick:printLandscape},'🖨️ 인쇄'))),
+    E('div',{className:'card-bd'},
+      E('div',{style:{fontSize:11,color:'#94a3b8',marginBottom:8}},
+        '○ 정상(1식, 기숙사는 석식 포함 2식) · 조n 조출 n시간 · 잔n 잔업 n시간(석식 지급) · 시n 시간차 n시간(3h 이내 1식) · 연 연차 · 결 결근 · 휴n잔n 휴일근무·잔업 n시간(잔업 시 석식 지급) · / 휴무 — 평일은 기본 정상근무로 계산되며, 사무실/기숙사 구분은 직원·기록 관리에서 설정합니다.'),
+      xmsg&&E('div',{style:{fontSize:12,marginBottom:8,color:xmsg.c}},xmsg.t),
+      E('div',{style:{overflowX:'auto'}},
+        E('table',{className:'mg'},
+          E('thead',null,E('tr',null,
+            E('th',{className:'nm'},'이름'),
+            days.map(d=>{const ds=ymKey+'-'+String(d).padStart(2,'0');const dt=new Date(y,m,d);const hol=isHol(ds,dt);
+              return E('th',{key:d,className:hol?'we':'',style:{color:dt.getDay()===0||HOLIDAYS[ds]?'#dc2626':dt.getDay()===6?'#2563eb':undefined}},d);}),
+            ['출근','조출h','잔업h','연차','식수','식비'].map(h=>E('th',{key:h},h)))),
+          E('tbody',null,activeEmps.map((e,i)=>{
+            const st=totals[i];
+            return E('tr',{key:e.id},
+              E('td',{className:'nm'},e.name),
+              days.map(d=>{const ds=ymKey+'-'+String(d).padStart(2,'0');const dt=new Date(y,m,d);const hol=isHol(ds,dt);
+                const r=dayCell(e,d);
+                return E('td',{key:d,className:hol?'we':'',style:{cursor:'pointer'},title:e.name+' '+ds,onClick:()=>setSelDate(ds)},r.code);}),
+              E('td',{className:'tot'},st.workD),
+              E('td',{className:'tot'},st.eoH||''),
+              E('td',{className:'tot'},st.otH||''),
+              E('td',{className:'tot'},st.lvD),
+              E('td',{className:'tot'},st.meals),
+              E('td',{className:'tot'},st.amount.toLocaleString()));
+          }),
+          E('tr',null,
+            E('td',{className:'nm',style:{fontWeight:700}},'합계'),
+            E('td',{colSpan:daysInMonth}),
+            E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),
+            E('td',{className:'tot'},grand.meals),
+            E('td',{className:'tot'},grand.amt.toLocaleString()))))),
+      E('div',{style:{fontSize:11,color:'#94a3b8',marginTop:8}},'날짜 칸을 클릭하면 그 날짜가 일별 입력에 선택됩니다. 1식 '+MEAL_PRICE.toLocaleString()+'원 · 이번 달 합계 '+grand.meals+'식 = '+grand.amt.toLocaleString()+'원')));
+
+  return E(React.Fragment,null,grid,dailyPanel,
+    E(MealPrint,{y,m,daysInMonth,activeEmps,dayCell,totals,grand,isHol,ymKey}));
+}
+
+// 인쇄용 월간 출근대장 (노무사 제출용, 가로 출력)
+function MealPrint({y,m,daysInMonth,activeEmps,dayCell,totals,grand,isHol,ymKey}){
+  const days=[]; for(let d=1;d<=daysInMonth;d++) days.push(d);
+  const th={border:'0.5px solid #888',background:'#f1efe8',padding:'3px 2px',fontSize:9,textAlign:'center'};
+  const td={border:'0.5px solid #888',padding:'3px 2px',fontSize:9,textAlign:'center'};
+  return E('div',{id:'print-area',className:'print-only',style:{padding:'0.5rem',background:'#fff'}},
+    E('div',{style:{textAlign:'center',fontSize:20,fontWeight:700,letterSpacing:6,marginBottom:2}},'출 근 대 장'),
+    E('div',{style:{textAlign:'center',fontSize:11,color:'#444',marginBottom:8}},'㈜케이엠제이 · '+y+'년 '+(m+1)+'월 · 출력일 '+today()),
+    E('table',{style:{width:'100%',borderCollapse:'collapse'}},
+      E('thead',null,E('tr',null,
+        E('th',{style:{...th,minWidth:44}},'이름'),
+        days.map(d=>{const ds=ymKey+'-'+String(d).padStart(2,'0');const dt=new Date(y,m,d);
+          return E('th',{key:d,style:{...th,color:dt.getDay()===0||HOLIDAYS[ds]?'#c00':dt.getDay()===6?'#04c':undefined}},d);}),
+        ['출근','조출(h)','잔업(h)','연차','식수','식비(원)'].map(h=>E('th',{key:h,style:th},h)))),
+      E('tbody',null,
+        activeEmps.map((e,i)=>{
+          const st=totals[i];
+          return E('tr',{key:e.id},
+            E('td',{style:{...td,fontWeight:600}},e.name),
+            days.map(d=>E('td',{key:d,style:td},dayCell(e,d).code)),
+            E('td',{style:td},st.workD),E('td',{style:td},st.eoH||''),E('td',{style:td},st.otH||''),E('td',{style:td},st.lvD),
+            E('td',{style:td},st.meals),E('td',{style:td},st.amount.toLocaleString()));
+        }),
+        E('tr',null,
+          E('td',{style:{...th,fontWeight:700}},'합계'),
+          E('td',{style:td,colSpan:daysInMonth}),
+          E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),
+          E('td',{style:{...td,fontWeight:700}},grand.meals),
+          E('td',{style:{...td,fontWeight:700}},grand.amt.toLocaleString())))),
+    E('div',{style:{fontSize:9,color:'#444',marginTop:6,lineHeight:1.6}},
+      '○ 정상근무(중식 1식) · 조n 조출 n시간 · 잔n 잔업 n시간(석식 지급) · 시n 시간차 n시간(3시간 이내 1식, 초과 미지원) · 연 연차 · 결 결근 · 휴n잔n 토·공휴일 근무·잔업 n시간(중식: 현장 5시간 이상/사무실 출근 시, 석식: 잔업 시) · / 휴무',E('br'),
+      '식비 1식 '+MEAL_PRICE.toLocaleString()+'원, 급여 지급 시 정산. 기숙사 이용 직원은 정상 출근한 평일에 석식비 지급(연차·반차·결근일 제외). 회사에서 식사를 직접 제공한 끼니는 지급하지 않음.'));
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(E(App));
