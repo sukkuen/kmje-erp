@@ -515,6 +515,30 @@ const HOLIDAYS={
   '2027-10-03':'개천절','2027-10-04':'대체공휴일','2027-10-09':'한글날','2027-10-11':'대체공휴일',
   '2027-12-25':'성탄절','2027-12-27':'대체공휴일'
 };
+// 공지사항 목록 (대시보드 표시용, 읽기 전용 — 작성·관리는 관리자 > 결재·현황)
+function NoticeBoard(){
+  const [notices,setNotices]=useState([]);
+  const [openNid,setOpenNid]=useState(null);
+  useEffect(()=>{
+    let un;
+    (async()=>{ const v=await dbGet('notices'); setNotices(v||[]); un=dbListen('notices',d=>setNotices(d||[])); })();
+    return ()=>{ un&&un(); };
+  },[]);
+  if(!notices.length) return null;
+  const sorted=[...notices].sort((a,b)=>((b.pinned?1:0)-(a.pinned?1:0))||(a.date<b.date?1:-1));
+  return E('div',{className:'card'},
+    E('div',{className:'card-hdr'},'📢 공지사항'),
+    E('div',{className:'card-bd'},
+      sorted.map(n=>E('div',{key:n.nid,style:{borderBottom:'1px solid #f1f5f9'}},
+        E('div',{style:{display:'flex',gap:8,alignItems:'center',cursor:'pointer',padding:'9px 0'},
+            onClick:()=>setOpenNid(openNid===n.nid?null:n.nid)},
+          n.pinned?E('span',null,'📌'):null,
+          E('span',{style:{fontWeight:600,flex:1,fontSize:13}},n.title),
+          E('span',{style:{fontSize:11,color:'#94a3b8'}},n.date),
+          E('span',{style:{fontSize:11,color:'#64748b'}},openNid===n.nid?'▲':'▼')),
+        openNid===n.nid&&E('div',{style:{whiteSpace:'pre-wrap',fontSize:13,color:'#334155',padding:'2px 6px 14px',lineHeight:1.8}},n.content)))));
+}
+
 function DashTab({emps,leaves}){
   const [cur,setCur]=useState(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1);});
   const shift=n=>setCur(new Date(cur.getFullYear(),cur.getMonth()+n,1));
@@ -540,7 +564,9 @@ function DashTab({emps,leaves}){
       return E('div',{key:l.lid,className:'cal-chip',style:{background:c.bg,color:c.fg},title:e.name+' · '+typeLabel(l)+' '+fmtDays(l.days)+(l.reason?' · '+l.reason:'')},label);
     }).filter(Boolean);
   }
-  return E('div',{className:'card'},
+  return E(React.Fragment,null,
+    E(NoticeBoard,null),
+    E('div',{className:'card'},
     E('div',{className:'card-hdr'},
       E('button',{className:'btn sm',onClick:()=>shift(-1)},'‹'),
       E('span',null,y+'년 '+(m+1)+'월'),
@@ -563,7 +589,7 @@ function DashTab({emps,leaves}){
             chips);
         })
       )
-    ));
+    )));
 }
 
 // ── 관리자 탭 ──
@@ -608,10 +634,64 @@ function AdminTab({emps,leaves,saveEmps,saveLeaves}){
   );
 }
 
+// 공지 관리 (관리자 전용) — 등록·수정·삭제·고정. 대시보드 공지사항에 실시간 반영.
+function NoticeAdmin(){
+  const [notices,setNotices]=useState([]);
+  const [nTitle,setNTitle]=useState(""),[nContent,setNContent]=useState(""),[nPinned,setNPinned]=useState(false);
+  const [editNid,setEditNid]=useState(null);
+  const [msg,setMsg]=useState(null);
+  useEffect(()=>{
+    let un;
+    (async()=>{ const v=await dbGet('notices'); setNotices(v||[]); un=dbListen('notices',d=>setNotices(d||[])); })();
+    return ()=>{ un&&un(); };
+  },[]);
+  async function save(next){ setNotices(next); await dbSet('notices',next); }
+  async function submit(){
+    if(!nTitle.trim()||!nContent.trim()){ setMsg({t:'제목과 내용을 입력하세요.',c:'#dc2626'}); return; }
+    if(editNid){
+      await save(notices.map(n=>n.nid===editNid?{...n,title:nTitle.trim(),content:nContent,pinned:nPinned?1:0}:n));
+      setMsg({t:'공지가 수정되었습니다.',c:'#166534'});
+    } else {
+      await save([...notices,{nid:uid(),date:today(),title:nTitle.trim(),content:nContent,pinned:nPinned?1:0}]);
+      setMsg({t:'공지가 등록되었습니다. 대시보드에 바로 표시됩니다.',c:'#166534'});
+    }
+    setNTitle("");setNContent("");setNPinned(false);setEditNid(null);
+  }
+  function startEdit(n){ setEditNid(n.nid);setNTitle(n.title);setNContent(n.content);setNPinned(!!n.pinned);setMsg(null); }
+  async function del(n){
+    if(!confirm('공지 "'+n.title+'"를 삭제합니다. 계속하시겠습니까?')) return;
+    await save(notices.filter(x=>x.nid!==n.nid));
+    if(editNid===n.nid){ setEditNid(null);setNTitle("");setNContent("");setNPinned(false); }
+  }
+  const sorted=[...notices].sort((a,b)=>((b.pinned?1:0)-(a.pinned?1:0))||(a.date<b.date?1:-1));
+  return E('div',{className:'card'},
+    E('div',{className:'card-hdr'},'📢 공지 관리',
+      E('span',{style:{fontSize:11,color:'#94a3b8',fontWeight:400}},'등록하면 전 직원 대시보드에 표시됩니다')),
+    E('div',{className:'card-bd'},
+      E('div',{style:{marginBottom:8}},E('span',{className:'lbl'},editNid?'공지 수정 중 — 제목':'제목'),
+        E('input',{className:'inp',value:nTitle,onChange:e=>setNTitle(e.target.value),placeholder:'예: 직원 식비 지원 기준 안내 (10월 시행)'})),
+      E('div',{style:{marginBottom:8}},E('span',{className:'lbl'},'내용 (칸은 자동으로 늘어남)'),
+        E(AutoTA,{value:nContent,onChange:e=>setNContent(e.target.value),placeholder:'공지 내용을 입력하세요'})),
+      E('div',{style:{display:'flex',gap:10,alignItems:'center',marginBottom:6}},
+        E('label',{style:{fontSize:12,display:'inline-flex',alignItems:'center',gap:5}},
+          E('input',{type:'checkbox',checked:nPinned,onChange:e=>setNPinned(e.target.checked)}),'📌 상단 고정'),
+        E('button',{className:'btn pri sm',onClick:submit},editNid?'수정 저장':'공지 등록'),
+        editNid&&E('button',{className:'btn sm',onClick:()=>{setEditNid(null);setNTitle("");setNContent("");setNPinned(false);}},'취소')),
+      msg&&E('div',{style:{fontSize:12,marginBottom:6,color:msg.c}},msg.t),
+      sorted.length>0&&E('div',{style:{marginTop:8,paddingTop:8,borderTop:'1px solid #f1f5f9'}},
+        sorted.map(n=>E('div',{key:n.nid,style:{display:'flex',gap:8,alignItems:'center',fontSize:12,padding:'6px 0',borderBottom:'1px solid #f8fafc'}},
+          n.pinned?E('span',null,'📌'):null,
+          E('span',{style:{fontWeight:500,flex:1}},n.title),
+          E('span',{style:{color:'#94a3b8'}},n.date),
+          E('button',{className:'btn sm',onClick:()=>startEdit(n)},'수정'),
+          E('button',{className:'btn sm dng',onClick:()=>del(n)},'삭제'))))));
+}
+
 function AdminWork({emps,leaves,saveLeaves}){
   const pend=leaves.filter(l=>l.status==='pending').sort((a,b)=>new Date(a.start)-new Date(b.start));
   const setStatus=async(lid,status)=>{ await saveLeaves(leaves.map(l=>l.lid===lid?{...l,status}:l)); };
   return E(React.Fragment,null,
+    E(NoticeAdmin,null),
     E('div',{className:'card'},
       E('div',{className:'card-hdr'},'📨 결재 대기 ('+pend.length+')'),
       E('div',{className:'card-bd'},
