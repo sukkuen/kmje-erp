@@ -474,10 +474,19 @@ function OrderModal({order,onSave,onClose,managers,clients,orders}){
         )
       ),
       E('div',{style:{marginBottom:10}},lbl('수행내용'),E('input',{style:iS,value:f.description,onChange:e=>sf('description',e.target.value)})),
-      E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:14}},
+      E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}},
         E('div',null,lbl('시작일'),E('input',{type:'date',style:iS,value:f.startDate,onChange:e=>sf('startDate',e.target.value)})),
-        E('div',null,lbl('종료일'),E('input',{type:'date',style:iS,value:f.endDate,onChange:e=>sf('endDate',e.target.value)})),
-        E('div',null,lbl('비고'),E('input',{style:iS,value:f.note,onChange:e=>sf('note',e.target.value)}))
+        E('div',null,lbl('종료일'),E('input',{type:'date',style:iS,value:f.endDate,onChange:e=>sf('endDate',e.target.value)}))
+      ),
+      E('div',{style:{marginBottom:14}},lbl('비고'),
+        E('textarea',{
+          value:f.note,
+          onChange:e=>{sf('note',e.target.value);e.target.style.height='auto';e.target.style.height=e.target.scrollHeight+'px';},
+          ref:el=>{if(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}},
+          rows:2,
+          placeholder:'여러 줄 입력 가능 (Enter로 줄바꿈)',
+          style:{...iS,minHeight:40,lineHeight:1.5,resize:'vertical',overflow:'hidden'}
+        })
       ),
       E('div',{style:{marginBottom:14}},
         E('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}},
