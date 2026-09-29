@@ -237,7 +237,7 @@ function mealCalc(emp,isHol,lv,ent){
     if(wh<=0&&ot<=0&&eo<=0&&!ent.rc&&!onTrip)
       return {meals:0,trip:0,tripAmt:0,code:'/'};            // 휴일 미근무
     const bfast=eo>=2&&!tAmts[0];                            // 조식: 조출 2시간 이상 (출장아침 금액 입력 시 실비로 대체)
-    const lunch=(emp.isOffice?wh>0:wh>=5)&&!ent.cl&&!tAmts[1];
+    const lunch=(emp.isOffice?wh>0:wh>=4)&&!ent.cl&&!tAmts[1]; // 현장: 실근무 4시간(반차 기준) 이상
     const dinner=otDinner(ot)&&!ent.cd&&!tAmts[2];
     const p=[]; if(wh>0)p.push('휴'+wh); if(eo>0)p.push('조'+eo); if(ot>0)p.push('잔'+ot);
     const code=(p.join('')+mark)||(ent.rc?'석':'/');
@@ -1651,7 +1651,7 @@ function MealPrint({y,m,daysInMonth,activeEmps,dayCell,totals,grand,isHol,ymKey}
           E('td',{style:{...td,fontWeight:700}},grand.amt.toLocaleString()),
           E('td',{style:{...td,fontWeight:700}},grand.total.toLocaleString()))]))),
     E('div',{style:{fontSize:9,color:'#444',marginTop:6,lineHeight:1.6}},
-      '○ 출근(중식 1식) · – 미출근 · 조n 조출 n시간(2시간 이상 조식, 휴일 포함) · 잔n 잔업 n시간(현장 석식 / 사무실 석식은 영수증 증빙) · 시n 시간차 n시간(반차 4시간까지 1식, 초과 미지원) · 연 연차 · 출/박 출장·숙박(기록) · 휴n 토·공휴일 근무 n시간(중식: 현장 5시간 이상/사무실 출근 시) · 석 휴일 영수증 석식 · / 휴무',E('br'),
+      '○ 출근(중식 1식) · – 미출근 · 조n 조출 n시간(2시간 이상 조식, 휴일 포함) · 잔n 잔업 n시간(현장 석식 / 사무실 석식은 영수증 증빙) · 시n 시간차 n시간(반차 4시간까지 1식, 초과 미지원) · 연 연차 · 출/박 출장·숙박(기록) · 휴n 토·공휴일 근무 n시간(중식: 현장 4시간 이상/사무실 출근 시) · 석 휴일 영수증 석식 · / 휴무',E('br'),
       '식비 1식 '+MEAL_PRICE.toLocaleString()+'원, 급여 지급 시 정산. 기숙사 이용 직원은 출근한 평일에 석식비 지급(연차·미출근일 제외). 출장 아침·점심·저녁은 1식 '+TRIP_MEAL.toLocaleString()+'원 고정("출장식"=끼니 수, "실비"=금액), "합계"는 정액 식비+출장 식비. 회사에서 식사를 직접 제공한 끼니는 지급하지 않음.'));
 }
 
