@@ -214,41 +214,49 @@ const HOUR_OPTS=(()=>{const a=[];for(let h=6;h<=22;h++)a.push((h<10?'0'+h:h)+':0
 // ── 식비 지원 (2026-10 시행 기준안) ──
 const MEAL_PRICE=9000; // 1식 지원금
 const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-// 하루 식비 판정 (규정 → 코드).
+// 하루 식비 판정 (규정 → 코드). ★ 출근 체크제: 평일은 출근(at) 체크가 있어야 정액 식비가 계산된다.
 // emp: {isOffice,isDorm} / isHol: 토·일·공휴일 여부
 // lv: {full:종일연차, hours:시간차 시간수}
-// ent: {eo:조출시간, ot:잔업시간, wh:휴일근무시간, absent:결근,
-//       bt:출장(기록·일수 집계용, 식비 영향 없음), sb:숙박(그날 석식+익일 조식),
-//       cl:회사중식제공, cd:회사석식제공, rc:석식 영수증(사무실 잔업 석식 증빙)}
-// prevStay: 전날 숙박(sb) 여부 → 오늘 조식 지급
+// ent: {at:출근, eo:조출시간, ot:잔업시간, wh:휴일근무시간,
+//       bt:출장(중식 실비), sb:숙박(그날 석식 실비+익일 조식 실비), lr:늦은복귀 18시 이후 도착(석식 실비),
+//       cl:회사중식제공, cd:회사석식제공, rc:석식 영수증(사무실 석식 증빙)}
+// prevStay: 전날 숙박(sb) 여부 → 오늘 조식 실비 인정
+// 반환: meals=정액(9,000원) 식수 / trip=출장 실비 끼니 수(영수증 정산, 1식 한도 10,000원 — 정액 합계에 미포함)
+// 실비 끼니: 조식(전날 숙박) + 중식(출장·숙박일) + 석식(숙박일·늦은복귀). 각 체크가 한 끼씩만 책임진다.
 function mealCalc(emp,isHol,lv,ent,prevStay){
   ent=ent||{}; lv=lv||{};
-  // 잔업 석식 판정 — 사무실: 영수증(rc) 체크 자체로 지급(잔업시간 무관), 현장: 잔업 시간 입력 시
+  const mark=(ent.bt?'출':'')+(ent.sb?'박':'')+(ent.lr?'늦':'');
+  const tripB=prevStay?1:0;
+  const tripLunch=(ent.bt||ent.sb)?1:0;                      // 출장·숙박일 중식은 실비
+  const tripDinner=(ent.sb||ent.lr)?1:0;                     // 숙박하는 날·늦은복귀 석식은 실비
+  const trip=tripB+tripLunch+tripDinner;
+  // 잔업 석식 판정 — 사무실: 영수증(rc) 체크 자체로 지급, 현장: 잔업 시간 입력 시
   const otDinner=o=>emp.isOffice?!!ent.rc:o>0;
-  const mark=(ent.bt?'출':'')+(ent.sb?'박':'');              // 출장/숙박 표기
   if(isHol){
     const wh=Number(ent.wh)||0, ot=Number(ent.ot)||0, eo=Number(ent.eo)||0;
-    const bfast=!!prevStay||eo>=2;                           // 조식: 숙박 다음날 또는 조출 2시간 이상 (휴일에도 동일)
-    if(wh<=0&&ot<=0&&eo<=0&&!ent.sb&&!bfast&&!ent.bt&&!ent.rc)
-      return {meals:0,code:'/'};                             // 휴일 미근무
-    const lunch=(emp.isOffice?wh>0:wh>=5)&&!ent.cl;          // 중식: 사무실 출근만 해도 / 현장 5시간 이상
-    const dinner=(otDinner(ot)||ent.sb)&&!ent.cd;            // 석식: 휴일 잔업 시(사무실은 영수증 체크만으로도) + 숙박하는 날은 무조건
+    if(wh<=0&&ot<=0&&eo<=0&&!ent.rc&&trip<=0)
+      return {meals:0,trip:0,code:'/'};                      // 휴일 미근무
+    const bfast=eo>=2;                                       // 조식: 조출 2시간 이상 (휴일 동일)
+    const lunch=(emp.isOffice?wh>0:wh>=5)&&!ent.cl&&!tripLunch;
+    const dinner=otDinner(ot)&&!ent.cd&&!tripDinner;
     const p=[]; if(wh>0)p.push('휴'+wh); if(eo>0)p.push('조'+eo); if(ot>0)p.push('잔'+ot);
-    const code=(p.join('')+mark)||(ent.rc?'석':'/');         // 영수증만 체크된 휴일은 '석'으로 표기
-    return {meals:(bfast?1:0)+(lunch?1:0)+(dinner?1:0),code};
+    const code=(p.join('')+mark)||(ent.rc?'석':'/');
+    return {meals:(bfast?1:0)+(lunch?1:0)+(dinner?1:0),trip,code};
   }
-  if(ent.absent) return {meals:0,code:'결'};                  // 결근: 기숙사 석식비도 없음
-  if(lv.full) return {meals:0,code:'연'};                     // 종일 연차: 기숙사 석식비도 없음
+  if(lv.full) return {meals:0,trip:tripB,code:'연'};          // 종일 연차: 정액·출장 중식 없음 (전날 숙박 조식만 인정)
   const h=(lv.hours!=null)?Number(lv.hours):null;
   const eo=Number(ent.eo)||0, ot=Number(ent.ot)||0;
+  // 출근 판정: 출근 체크 또는 출장·숙박·늦은복귀·시간차 사용 시 출근 간주
+  const attended=!!ent.at||!!ent.bt||!!ent.sb||!!ent.lr||h!=null;
   const parts=[]; if(h!=null)parts.push('시'+h); if(eo>0)parts.push('조'+eo); if(ot>0)parts.push('잔'+ot);
+  if(!attended) return {meals:0,trip:tripB,code:tripB?'○':'–'}; // 미출근(미입력·결근)
   const code=(parts.length?parts.join(''):(mark?'':'○'))+mark;
-  if(h!=null&&h>3) return {meals:0,code};                    // 3시간 초과 시간차·반차: 전 끼니 미지원
-  const bfast=eo>=2||!!prevStay;                             // 조식: 조출 2시간 이상 또는 숙박 다음날 (중복 시 1회)
-  const lunch=!ent.cl;                                       // 회사 중식 제공 시 미지급
-  const dinner=(otDinner(ot)||emp.isDorm||ent.sb)&&!ent.cd;  // 석식: 잔업자(사무실은 영수증 체크) + 기숙사 + 숙박하는 날
+  if(h!=null&&h>4) return {meals:0,trip:tripB,code};         // 반차(4시간) 초과 시간차: 미지원 (반차까지는 지원)
+  const bfast=eo>=2;                                         // 조식: 조출 2시간 이상
+  const lunch=!ent.cl&&!tripLunch;                           // 중식: 출근 시 정액 (출장·숙박일은 실비로 대체)
+  const dinner=(otDinner(ot)||emp.isDorm)&&!ent.cd&&!tripDinner; // 석식: 잔업(사무실 영수증)·기숙사 (숙박·늦은복귀는 실비로 대체)
   const meals=(bfast?1:0)+(lunch?1:0)+(dinner?1:0);
-  return {meals,code};
+  return {meals,trip,code};
 }
 // SheetJS 지연 로드 (엑셀 내보내기)
 let XLSX_P=null;
@@ -1400,6 +1408,18 @@ function MealTab({emps,leaves}){
   });
   const entOf=(empId,ds)=>(att[empId]||{})[ds];
   const lvOf=(empId,ds)=>(lvMap[ds]||{})[empId];
+  // 전원 출근 처리: 그 날짜의 재직자 전원에 출근 체크 (종일 연차자는 제외)
+  async function markAllAttend(ds){
+    const mo={...att};
+    activeEmps.forEach(e=>{
+      const lv=lvOf(e.id,ds);
+      if(lv&&lv.full) return;
+      const em={...(mo[e.id]||{})};
+      em[ds]={...(em[ds]||{}),at:1};
+      mo[e.id]=em;
+    });
+    setAtt(mo); await dbSet('meal_'+ymKey,mo);
+  }
   async function setEntry(empId,ds,patch){
     const mo={...att}; const em={...(mo[empId]||{})};
     const c={...(em[ds]||{}),...patch};
@@ -1419,25 +1439,27 @@ function MealTab({emps,leaves}){
     return mealCalc(emp,isHol(ds,dt),lvOf(emp.id,ds),entOf(emp.id,ds),prevStayOf(emp.id,d));
   }
   function monthStats(emp){
-    let meals=0,workD=0,eoH=0,otH=0,whH=0,btD=0;
+    let meals=0,tripM=0,workD=0,eoH=0,otH=0,whH=0,btD=0;
     for(let d=1;d<=daysInMonth;d++){
       const ds=ymKey+'-'+String(d).padStart(2,'0');
       const dt=new Date(y,m,d), hol=isHol(ds,dt);
       const lv=lvOf(emp.id,ds), ent=entOf(emp.id,ds);
-      meals+=mealCalc(emp,hol,lv,ent,prevStayOf(emp.id,d)).meals;
-      if(ent&&(ent.bt||ent.sb)) btD++; // 출장일수 (당일·숙박 모두, ×출장비 계산용)
+      const r=mealCalc(emp,hol,lv,ent,prevStayOf(emp.id,d));
+      meals+=r.meals; tripM+=r.trip||0;
+      if(ent&&(ent.bt||ent.sb||ent.lr)) btD++; // 출장일수 (당일·숙박·귀가 모두)
       if(hol){
-        if(ent&&(Number(ent.wh)>0||Number(ent.ot)>0||Number(ent.eo)>0||ent.bt||ent.sb||ent.rc)) workD++;
+        if(ent&&(Number(ent.wh)>0||Number(ent.ot)>0||Number(ent.eo)>0||ent.bt||ent.sb||ent.lr||ent.rc)) workD++;
         if(ent){ eoH+=Number(ent.eo)||0; otH+=Number(ent.ot)||0; whH+=Number(ent.wh)||0; }
       }
       else {
-        if(!(ent&&ent.absent)&&!(lv&&lv.full)) workD++;
+        // 출근 체크제: 체크(또는 출장·숙박·늦은복귀·시간차)된 날만 출근으로 집계
+        if(!(lv&&lv.full)&&((ent&&(ent.at||ent.bt||ent.sb||ent.lr))||(lv&&lv.hours!=null))) workD++;
         if(ent){ eoH+=Number(ent.eo)||0; otH+=Number(ent.ot)||0; }
       }
     }
     const r1=v=>Math.round(v*10)/10;
     const remain=balance(emp,leaves).remain; // 잔여연차 (연차 시스템 실시간 연동)
-    return {meals,workD,eoH:r1(eoH),otH:r1(otH),whH:r1(whH),btD,remain,amount:meals*MEAL_PRICE};
+    return {meals,tripM,workD,eoH:r1(eoH),otH:r1(otH),whH:r1(whH),btD,remain,amount:meals*MEAL_PRICE};
   }
   async function exportXlsx(){
     try{
@@ -1445,17 +1467,17 @@ function MealTab({emps,leaves}){
       const X=await loadXlsx();
       const days=[]; for(let d=1;d<=daysInMonth;d++) days.push(d);
       // 급여명세서에 인원별로 오려 붙일 수 있도록, 각 인원 위에 월일 헤더를 반복한다
-      const headRow=[(m+1)+'월',...days.map(d=>d+'일'),'출근','조출h','잔업h','휴일h','출장일','잔여연차','식수','식비(원)'];
+      const headRow=[(m+1)+'월',...days.map(d=>d+'일'),'출근','조출h','잔업h','휴일h','출장일','출장식','잔여연차','식수','식비(원)'];
       const rows=[];
       activeEmps.forEach(e=>{
         const st=monthStats(e);
         rows.push(headRow);
         rows.push([e.name,...days.map(d=>dayCell(e,d).code),
-          st.workD,st.eoH,st.otH,st.whH,st.btD,fmtDays(st.remain),st.meals,st.amount]);
+          st.workD,st.eoH,st.otH,st.whH,st.btD,st.tripM,fmtDays(st.remain),st.meals,st.amount]);
       });
       const total=activeEmps.reduce((s,e)=>{const st=monthStats(e);return {meals:s.meals+st.meals,amt:s.amt+st.amount};},{meals:0,amt:0});
-      const aoa=[['출근대장 '+y+'년 '+(m+1)+'월  (1식 '+MEAL_PRICE.toLocaleString()+'원 · ○정상 조n:조출(2h↑조식) 잔n:잔업 시n:시간차 연:연차 결:결근 출:출장 박:숙박(석식+익일조식) 휴n:휴일근무 /:휴무)'],...rows,
-        [],['합계',...days.map(()=>''),'','','','','','',total.meals,total.amt]];
+      const aoa=[['출근대장 '+y+'년 '+(m+1)+'월  (1식 '+MEAL_PRICE.toLocaleString()+'원 · ○출근 –미출근 조n:조출(2h↑조식) 잔n:잔업 시n:시간차(반차까지) 연:연차 출:출장(중식실비) 박:숙박(석식+익일조식 실비) 늦:늦은복귀(석식실비) 휴n:휴일근무 /:휴무 · 출장식=영수증 실비 끼니 수, 1식 한도 10,000원)'],...rows,
+        [],['합계',...days.map(()=>''),'','','','','','','',total.meals,total.amt]];
       const ws=X.utils.aoa_to_sheet(aoa);
       const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,ymKey);
       X.writeFile(wb,'출근대장_'+ymKey+'.xlsx');
@@ -1477,14 +1499,16 @@ function MealTab({emps,leaves}){
     E('div',{className:'card-bd'},
       !selValid?E('div',{style:{color:'#94a3b8',fontSize:12}},'날짜를 선택하세요.')
       :E(React.Fragment,null,
-        E('div',{style:{fontSize:12,marginBottom:10,color:selHol?'#dc2626':'#64748b'}},
-          selDate+' ('+['일','월','화','수','목','금','토'][selDt.getDay()]+') '
-          +(HOLIDAYS[selDate]?'· '+HOLIDAYS[selDate]+' ':'')
-          +(selHol?'— 휴일: 근무한 사람만 시간을 입력하세요 (현장 5시간 이상 1식, 사무실 출근 시 1식)':'— 평일: 기본 정상근무(1식). 예외만 체크하세요')),
+        E('div',{style:{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:10}},
+          E('span',{style:{fontSize:12,color:selHol?'#dc2626':'#64748b'}},
+            selDate+' ('+['일','월','화','수','목','금','토'][selDt.getDay()]+') '
+            +(HOLIDAYS[selDate]?'· '+HOLIDAYS[selDate]+' ':'')
+            +(selHol?'— 휴일: 근무한 사람만 시간을 입력하세요':'— 평일: 출근 체크한 사람만 식비가 계산됩니다')),
+          !selHol&&E('button',{className:'btn sm pri',onClick:()=>markAllAttend(selDate)},'✅ 전원 출근 처리')),
         E('div',{style:{overflowX:'auto'}},
           E('table',null,
             E('thead',null,E('tr',null,
-              ['이름','자동 반영',...(selHol?['근무시간(h)','조출(h)','잔업(h)','출장','숙박','회사 중식','회사 석식','석식 영수증']:['조출(h)','잔업(h)','결근','출장','숙박','회사 중식','회사 석식','석식 영수증']),'판정'].map(h=>E('th',{key:h},h)))),
+              ['이름','자동 반영',...(selHol?['근무시간(h)','조출(h)','잔업(h)','출장','숙박','늦은복귀','회사 중식','회사 석식','석식 영수증']:['출근','조출(h)','잔업(h)','출장','숙박','늦은복귀','회사 중식','회사 석식','석식 영수증']),'판정'].map(h=>E('th',{key:h},h)))),
             E('tbody',null,activeEmps.map(e=>{
               const ent=entOf(e.id,selDate)||{};
               const lv=lvOf(e.id,selDate);
@@ -1504,19 +1528,22 @@ function MealTab({emps,leaves}){
                       E('td',null,hrs('ot')),
                       E('td',{style:{textAlign:'center'}},chk('bt')),
                       E('td',{style:{textAlign:'center'}},chk('sb')),
+                      E('td',{style:{textAlign:'center'}},chk('lr')),
                       E('td',{style:{textAlign:'center'}},chk('cl')),
                       E('td',{style:{textAlign:'center'}},chk('cd')),
                       E('td',{style:{textAlign:'center'}},e.isOffice?chk('rc'):E('span',{style:{color:'#cbd5e1'}},'–')))
                   : E(React.Fragment,null,
+                      E('td',{style:{textAlign:'center'}},chk('at')),
                       E('td',null,hrs('eo')),
                       E('td',null,hrs('ot')),
-                      E('td',{style:{textAlign:'center'}},chk('absent')),
                       E('td',{style:{textAlign:'center'}},chk('bt')),
                       E('td',{style:{textAlign:'center'}},chk('sb')),
+                      E('td',{style:{textAlign:'center'}},chk('lr')),
                       E('td',{style:{textAlign:'center'}},chk('cl')),
                       E('td',{style:{textAlign:'center'}},chk('cd')),
                       E('td',{style:{textAlign:'center'}},e.isOffice?chk('rc'):E('span',{style:{color:'#cbd5e1'}},'–'))),
-                E('td',{style:{textAlign:'center',fontWeight:600,color:r.meals>0?'#166534':'#94a3b8'}},r.meals+'식'));
+                E('td',{style:{textAlign:'center',fontWeight:600,color:(r.meals>0||r.trip>0)?'#166534':'#94a3b8'}},
+                  r.meals+'식'+(r.trip?' +실비'+r.trip:'')));
             }))))
       )));
 
@@ -1536,7 +1563,7 @@ function MealTab({emps,leaves}){
         E('button',{className:'btn sm',onClick:printLandscape},'🖨️ 인쇄'))),
     E('div',{className:'card-bd'},
       E('div',{style:{fontSize:11,color:'#94a3b8',marginBottom:8}},
-        '○ 정상(1식, 기숙사는 석식 포함 2식) · 조n 조출 n시간(2h 이상 조식, 휴일 포함) · 잔n 잔업 n시간(현장 석식 / 사무실 석식은 영수증 체크로 지급) · 시n 시간차(3h 이내 1식) · 연 연차 · 결 결근 · 출 출장(기록·일수 집계만, 식비는 평소 규칙) · 박 숙박(그날 석식+다음날 조식) · 휴n 휴일근무 · 석 휴일 영수증 석식(사무실) · / 휴무 — 평일은 기본 정상근무로 계산되며, 사무실/기숙사 구분은 직원·기록 관리에서 설정합니다.'),
+        '★ 출근 체크제: 평일은 [일별 입력]에서 출근 체크(또는 ✅ 전원 출근 처리)를 해야 식비가 계산됩니다 · ○ 출근(1식, 기숙사는 석식 포함 2식) · – 미출근(체크 없음) · 조n 조출(2h 이상 조식) · 잔n 잔업(현장 석식 / 사무실은 영수증 체크로 석식) · 시n 시간차(반차 4h까지 1식) · 연 연차 · 출 출장(중식 실비) · 박 숙박(석식 실비+익일 조식 실비) · 늦 늦은복귀 18시 이후(석식 실비) — 실비는 영수증 정산(1식 한도 10,000원), "출장식" 건수로 집계 · 휴n 휴일근무 · 석 휴일 영수증 석식 · / 휴무 · 사무실/기숙사 구분은 직원·기록 관리에서 설정'),
       xmsg&&E('div',{style:{fontSize:12,marginBottom:8,color:xmsg.c}},xmsg.t),
       E('div',{style:{overflowX:'auto'}},
         E('table',{className:'mg'},
@@ -1544,7 +1571,7 @@ function MealTab({emps,leaves}){
             E('th',{className:'nm'},'이름'),
             days.map(d=>{const ds=ymKey+'-'+String(d).padStart(2,'0');const dt=new Date(y,m,d);const hol=isHol(ds,dt);
               return E('th',{key:d,className:hol?'we':'',style:{color:dt.getDay()===0||HOLIDAYS[ds]?'#dc2626':dt.getDay()===6?'#2563eb':undefined}},d);}),
-            ['출근','조출h','잔업h','휴일h','출장','잔여연차','식수','식비'].map(h=>E('th',{key:h},h)))),
+            ['출근','조출h','잔업h','휴일h','출장','출장식','잔여연차','식수','식비'].map(h=>E('th',{key:h},h)))),
           E('tbody',null,activeEmps.map((e,i)=>{
             const st=totals[i];
             return E('tr',{key:e.id},
@@ -1557,6 +1584,7 @@ function MealTab({emps,leaves}){
               E('td',{className:'tot'},st.otH||''),
               E('td',{className:'tot'},st.whH||''),
               E('td',{className:'tot'},st.btD||''),
+              E('td',{className:'tot'},st.tripM||''),
               E('td',{className:'tot'},fmtDays(st.remain)),
               E('td',{className:'tot'},st.meals),
               E('td',{className:'tot'},st.amount.toLocaleString()));
@@ -1564,7 +1592,7 @@ function MealTab({emps,leaves}){
           E('tr',null,
             E('td',{className:'nm',style:{fontWeight:700}},'합계'),
             E('td',{colSpan:daysInMonth}),
-            E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),
+            E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),
             E('td',{className:'tot'},grand.meals),
             E('td',{className:'tot'},grand.amt.toLocaleString()))))),
       E('div',{style:{fontSize:11,color:'#94a3b8',marginTop:8}},'날짜 칸을 클릭하면 그 날짜가 일별 입력에 선택됩니다. 1식 '+MEAL_PRICE.toLocaleString()+'원 · 이번 달 합계 '+grand.meals+'식 = '+grand.amt.toLocaleString()+'원')));
@@ -1583,7 +1611,7 @@ function MealPrint({y,m,daysInMonth,activeEmps,dayCell,totals,grand,isHol,ymKey}
     E('th',{style:{...th,minWidth:44}},(m+1)+'월'),
     days.map(d=>{const ds=ymKey+'-'+String(d).padStart(2,'0');const dt=new Date(y,m,d);
       return E('th',{key:d,style:{...th,color:dt.getDay()===0||HOLIDAYS[ds]?'#c00':dt.getDay()===6?'#04c':undefined}},d);}),
-    ['출근','조출h','잔업h','휴일h','출장','잔여연차','식수','식비(원)'].map(h=>E('th',{key:h,style:th},h)));
+    ['출근','조출h','잔업h','휴일h','출장','출장식','잔여연차','식수','식비(원)'].map(h=>E('th',{key:h,style:th},h)));
   return E('div',{id:'print-area',className:'print-only',style:{padding:'0.5rem',background:'#fff'}},
     E('div',{style:{textAlign:'center',fontSize:20,fontWeight:700,letterSpacing:6,marginBottom:2}},'출 근 대 장'),
     E('div',{style:{textAlign:'center',fontSize:11,color:'#444',marginBottom:8}},'㈜케이엠제이 · '+y+'년 '+(m+1)+'월 · 출력일 '+today()),
@@ -1596,19 +1624,19 @@ function MealPrint({y,m,daysInMonth,activeEmps,dayCell,totals,grand,isHol,ymKey}
             E('tr',{key:e.id},
               E('td',{style:{...td,fontWeight:600}},e.name),
               days.map(d=>E('td',{key:d,style:td},dayCell(e,d).code)),
-              E('td',{style:td},st.workD),E('td',{style:td},st.eoH||''),E('td',{style:td},st.otH||''),E('td',{style:td},st.whH||''),E('td',{style:td},st.btD||''),E('td',{style:td},fmtDays(st.remain)),
+              E('td',{style:td},st.workD),E('td',{style:td},st.eoH||''),E('td',{style:td},st.otH||''),E('td',{style:td},st.whH||''),E('td',{style:td},st.btD||''),E('td',{style:td},st.tripM||''),E('td',{style:td},fmtDays(st.remain)),
               E('td',{style:td},st.meals),E('td',{style:td},st.amount.toLocaleString()))
           ];
         }).concat([
         E('tr',{key:'sum'},
           E('td',{style:{...th,fontWeight:700}},'합계'),
           E('td',{style:td,colSpan:daysInMonth}),
-          E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),
+          E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),
           E('td',{style:{...td,fontWeight:700}},grand.meals),
           E('td',{style:{...td,fontWeight:700}},grand.amt.toLocaleString()))]))),
     E('div',{style:{fontSize:9,color:'#444',marginTop:6,lineHeight:1.6}},
-      '○ 정상근무(중식 1식) · 조n 조출 n시간(2시간 이상 조식 지급, 휴일 포함) · 잔n 잔업 n시간(현장 석식 지급 / 사무실 석식은 영수증 증빙으로 지급) · 시n 시간차 n시간(3시간 이내 1식, 초과 미지원) · 연 연차 · 결 결근 · 출 출장(출장비 별도 정산, 식비는 평소 규칙) · 박 숙박(그날 석식+다음날 조식 지급) · 휴n 토·공휴일 근무 n시간(중식: 현장 5시간 이상/사무실 출근 시) · / 휴무',E('br'),
-      '식비 1식 '+MEAL_PRICE.toLocaleString()+'원, 급여 지급 시 정산. 기숙사 이용 직원은 정상 출근한 평일에 석식비 지급(연차·반차·결근일 제외). 회사에서 식사를 직접 제공한 끼니는 지급하지 않음.'));
+      '○ 출근(중식 1식) · – 미출근 · 조n 조출 n시간(2시간 이상 조식, 휴일 포함) · 잔n 잔업 n시간(현장 석식 / 사무실 석식은 영수증 증빙) · 시n 시간차 n시간(반차 4시간까지 1식, 초과 미지원) · 연 연차 · 출 출장(중식 실비) · 박 숙박(석식 실비+익일 조식 실비) · 늦 늦은복귀 18시 이후(석식 실비) · 휴n 토·공휴일 근무 n시간(중식: 현장 5시간 이상/사무실 출근 시) · 석 휴일 영수증 석식 · / 휴무',E('br'),
+      '식비 1식 '+MEAL_PRICE.toLocaleString()+'원, 급여 지급 시 정산. 기숙사 이용 직원은 출근한 평일에 석식비 지급(연차·미출근일 제외). 출장 실비는 영수증 정산(1식 한도 10,000원, 급여 지급 시)이며 "출장식" 열은 인정 끼니 수. 회사에서 식사를 직접 제공한 끼니는 지급하지 않음.'));
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(E(App));
