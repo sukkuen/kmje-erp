@@ -1462,7 +1462,7 @@ function MealTab({emps,leaves}){
     const r1=v=>Math.round(v*10)/10;
     const remain=balance(emp,leaves).remain; // 잔여연차 (연차 시스템 실시간 연동)
     const amount=meals*MEAL_PRICE;
-    return {meals,tripM,tripA,workD,eoH:r1(eoH),otH:r1(otH),whH:r1(whH),btD,remain,amount,total:amount+tripA};
+    return {meals,tripM,tripA,workD,eoH:r1(eoH),otH:r1(otH),extH:r1(eoH+otH),whH:r1(whH),btD,remain,amount,total:amount+tripA};
   }
   async function exportXlsx(){
     try{
@@ -1470,17 +1470,17 @@ function MealTab({emps,leaves}){
       const X=await loadXlsx();
       const days=[]; for(let d=1;d<=daysInMonth;d++) days.push(d);
       // 급여명세서에 인원별로 오려 붙일 수 있도록, 각 인원 위에 월일 헤더를 반복한다
-      const headRow=[(m+1)+'월',...days.map(d=>d+'일'),'출근','조출h','잔업h','휴일h','출장일','출장식','실비(원)','잔여연차','식수','식비(원)','합계(원)'];
+      const headRow=[(m+1)+'월',...days.map(d=>d+'일'),'출근','조출h','잔업h','조출+잔업h','휴일h','출장일','출장식','실비(원)','잔여연차','식수','식비(원)','합계(원)'];
       const rows=[];
       activeEmps.forEach(e=>{
         const st=monthStats(e);
         rows.push(headRow);
         rows.push([e.name,...days.map(d=>dayCell(e,d).code),
-          st.workD,st.eoH,st.otH,st.whH,st.btD,st.tripM,st.tripA,fmtDays(st.remain),st.meals,st.amount,st.total]);
+          st.workD,st.eoH,st.otH,st.extH,st.whH,st.btD,st.tripM,st.tripA,fmtDays(st.remain),st.meals,st.amount,st.total]);
       });
       const total=activeEmps.reduce((s,e)=>{const st=monthStats(e);return {meals:s.meals+st.meals,amt:s.amt+st.amount,tripA:s.tripA+st.tripA,tot:s.tot+st.total};},{meals:0,amt:0,tripA:0,tot:0});
       const aoa=[['출근대장 '+y+'년 '+(m+1)+'월  (1식 '+MEAL_PRICE.toLocaleString()+'원 · ○출근 –미출근 조n:조출(2h↑조식) 잔n:잔업 시n:시간차(반차까지) 연:연차 출/박:출장·숙박(기록) 휴n:휴일근무 /:휴무 · 출장 아침/점심/저녁 체크=1식 10,000원 고정)'],...rows,
-        [],['합계',...days.map(()=>''),'','','','','','',total.tripA,'',total.meals,total.amt,total.tot]];
+        [],['합계',...days.map(()=>''),'','','','','','','',total.tripA,'',total.meals,total.amt,total.tot]];
       const ws=X.utils.aoa_to_sheet(aoa);
       const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,ymKey);
       X.writeFile(wb,'출근대장_'+ymKey+'.xlsx');
@@ -1579,7 +1579,7 @@ function MealTab({emps,leaves}){
             E('th',{className:'nm'},'이름'),
             days.map(d=>{const ds=ymKey+'-'+String(d).padStart(2,'0');const dt=new Date(y,m,d);const hol=isHol(ds,dt);
               return E('th',{key:d,className:hol?'we':'',style:{color:dt.getDay()===0||HOLIDAYS[ds]?'#dc2626':dt.getDay()===6?'#2563eb':undefined}},d);}),
-            ['출근','조출h','잔업h','휴일h','출장','출장식','실비(원)','잔여연차','식수','식비(원)','합계(원)'].map(h=>E('th',{key:h},h)))),
+            ['출근','조출h','잔업h','조+잔h','휴일h','출장','출장식','실비(원)','잔여연차','식수','식비(원)','합계(원)'].map(h=>E('th',{key:h},h)))),
           E('tbody',null,activeEmps.map((e,i)=>{
             const st=totals[i];
             return E('tr',{key:e.id},
@@ -1590,6 +1590,7 @@ function MealTab({emps,leaves}){
               E('td',{className:'tot'},st.workD),
               E('td',{className:'tot'},st.eoH||''),
               E('td',{className:'tot'},st.otH||''),
+              E('td',{className:'tot',style:{fontWeight:600}},st.extH||''),
               E('td',{className:'tot'},st.whH||''),
               E('td',{className:'tot'},st.btD||''),
               E('td',{className:'tot'},st.tripM||''),
@@ -1602,7 +1603,7 @@ function MealTab({emps,leaves}){
           E('tr',null,
             E('td',{className:'nm',style:{fontWeight:700}},'합계'),
             E('td',{colSpan:daysInMonth}),
-            E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),
+            E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),E('td',{className:'tot'},''),
             E('td',{className:'tot'},grand.tripA.toLocaleString()),
             E('td',{className:'tot'},''),
             E('td',{className:'tot'},grand.meals),
@@ -1624,7 +1625,7 @@ function MealPrint({y,m,daysInMonth,activeEmps,dayCell,totals,grand,isHol,ymKey}
     E('th',{style:{...th,minWidth:44}},(m+1)+'월'),
     days.map(d=>{const ds=ymKey+'-'+String(d).padStart(2,'0');const dt=new Date(y,m,d);
       return E('th',{key:d,style:{...th,color:dt.getDay()===0||HOLIDAYS[ds]?'#c00':dt.getDay()===6?'#04c':undefined}},d);}),
-    ['출근','조출h','잔업h','휴일h','출장','출장식','실비(원)','잔여연차','식수','식비(원)','합계(원)'].map(h=>E('th',{key:h,style:th},h)));
+    ['출근','조출h','잔업h','조+잔h','휴일h','출장','출장식','실비(원)','잔여연차','식수','식비(원)','합계(원)'].map(h=>E('th',{key:h,style:th},h)));
   return E('div',{id:'print-area',className:'print-only',style:{padding:'0.5rem',background:'#fff'}},
     E('div',{style:{textAlign:'center',fontSize:20,fontWeight:700,letterSpacing:6,marginBottom:2}},'출 근 대 장'),
     E('div',{style:{textAlign:'center',fontSize:11,color:'#444',marginBottom:8}},'㈜케이엠제이 · '+y+'년 '+(m+1)+'월 · 출력일 '+today()),
@@ -1637,14 +1638,14 @@ function MealPrint({y,m,daysInMonth,activeEmps,dayCell,totals,grand,isHol,ymKey}
             E('tr',{key:e.id},
               E('td',{style:{...td,fontWeight:600}},e.name),
               days.map(d=>E('td',{key:d,style:td},dayCell(e,d).code)),
-              E('td',{style:td},st.workD),E('td',{style:td},st.eoH||''),E('td',{style:td},st.otH||''),E('td',{style:td},st.whH||''),E('td',{style:td},st.btD||''),E('td',{style:td},st.tripM||''),E('td',{style:td},st.tripA?st.tripA.toLocaleString():''),E('td',{style:td},fmtDays(st.remain)),
+              E('td',{style:td},st.workD),E('td',{style:td},st.eoH||''),E('td',{style:td},st.otH||''),E('td',{style:{...td,fontWeight:600}},st.extH||''),E('td',{style:td},st.whH||''),E('td',{style:td},st.btD||''),E('td',{style:td},st.tripM||''),E('td',{style:td},st.tripA?st.tripA.toLocaleString():''),E('td',{style:td},fmtDays(st.remain)),
               E('td',{style:td},st.meals),E('td',{style:td},st.amount.toLocaleString()),E('td',{style:{...td,fontWeight:700}},st.total.toLocaleString()))
           ];
         }).concat([
         E('tr',{key:'sum'},
           E('td',{style:{...th,fontWeight:700}},'합계'),
           E('td',{style:td,colSpan:daysInMonth}),
-          E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),
+          E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),E('td',{style:td},''),
           E('td',{style:{...td,fontWeight:700}},grand.tripA.toLocaleString()),
           E('td',{style:td},''),
           E('td',{style:{...td,fontWeight:700}},grand.meals),
