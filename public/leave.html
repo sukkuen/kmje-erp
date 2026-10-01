@@ -168,6 +168,9 @@ const yLabel = b => b.months<12 ? b.months+'개월' : b.years+'년';
 // 직원 정렬: 임원 먼저 → 부서 가나다순 → 부서 안에서 직위 순 → 이름 가나다순
 const DEPT_FIRST=['임원'];
 const POS_RANK=['대표','대표이사','부사장','전무','상무','이사','부장','차장','과장','대리','주임','사원'];
+// 직원 등록용 부서·직위 목록 (드롭다운)
+const DEPTS=['생산팀','설계팀','경영지원팀','임원'];
+const POSITIONS=['사원','주임','대리','과장','차장','부장','이사','상무','전무'];
 function sortEmps(list){
   const posR=p=>{const i=POS_RANK.indexOf(p);return i===-1?99:i;};
   return [...list].sort((a,b)=>{
@@ -784,10 +787,16 @@ function StatTable({emps,leaves,saveLeaves}){
 
 function AdminManage({emps,leaves,saveEmps,saveLeaves}){
   const [editId,setEditId]=useState(null);
-  const [nName,setNName]=useState(""),[nHire,setNHire]=useState(""),[nDept,setNDept]=useState(""),[nPos,setNPos]=useState("");
+  const [nName,setNName]=useState(""),[nHire,setNHire]=useState(""),[nDept,setNDept]=useState(""),[nPos,setNPos]=useState(""),[nDaily,setNDaily]=useState(false);
   const [eName,setEName]=useState(""),[eHire,setEHire]=useState(""),[eDept,setEDept]=useState(""),[ePos,setEPos]=useState("");
   const [eHold,setEHold]=useState(""),[eSettle,setESettle]=useState("");
-  const [eOffice,setEOffice]=useState(false),[eDorm,setEDorm]=useState(false);
+  const [eOffice,setEOffice]=useState(false),[eDorm,setEDorm]=useState(false),[eDaily,setEDaily]=useState(false);
+  // 부서·직위 드롭다운 (기존 값이 목록에 없으면 그 값도 선택지로 유지)
+  const selOpts=(list,cur)=>(cur&&!list.includes(cur)?[cur,...list]:list);
+  const deptSel=(val,set)=>E('select',{className:'inp',value:val,onChange:e=>set(e.target.value)},
+    E('option',{value:''},'부서 선택'),selOpts(DEPTS,val).map(d=>E('option',{key:d,value:d},d)));
+  const posSel=(val,set)=>E('select',{className:'inp',value:val,onChange:e=>set(e.target.value)},
+    E('option',{value:''},'직위 선택'),selOpts(POSITIONS,val).map(p=>E('option',{key:p,value:p},p)));
   const [hmode,setHmode]=useState("period");
   // 기간형
   const [pEmp,setPEmp]=useState(""),[pStart,setPStart]=useState(""),[pEnd,setPEnd]=useState(""),[pDays,setPDays]=useState(""),[pReason,setPReason]=useState("");
@@ -797,16 +806,16 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
 
   async function addEmp(){
     if(!nName||!nHire){ alert('이름과 입사일을 입력하세요.'); return; }
-    await saveEmps([...emps,{id:uid(),name:nName,hire:nHire,dept:nDept||'-',position:nPos||'-'}]);
-    setNName("");setNHire("");setNDept("");setNPos("");
+    await saveEmps([...emps,{id:uid(),name:nName,hire:nHire,dept:nDept||'-',position:nPos||'-',isDaily:nDaily}]);
+    setNName("");setNHire("");setNDept("");setNPos("");setNDaily(false);
   }
-  function startEdit(e){ setEditId(e.id);setEName(e.name);setEHire(e.hire);setEDept(e.dept);setEPos(e.position);setEHold(e.holdOverride!==undefined&&e.holdOverride!==null?String(e.holdOverride):"");setESettle(e.settle?String(e.settle):"");setEOffice(!!e.isOffice);setEDorm(!!e.isDorm); }
+  function startEdit(e){ setEditId(e.id);setEName(e.name);setEHire(e.hire);setEDept(e.dept);setEPos(e.position);setEHold(e.holdOverride!==undefined&&e.holdOverride!==null?String(e.holdOverride):"");setESettle(e.settle?String(e.settle):"");setEOffice(!!e.isOffice);setEDorm(!!e.isDorm);setEDaily(!!e.isDaily); }
   async function saveEdit(){
     if(!eName||!eHire){ alert('이름과 입사일은 비울 수 없습니다.'); return; }
     const patch={name:eName,hire:eHire,dept:eDept||'-',position:ePos||'-'};
     patch.holdOverride = (eHold===''||eHold===null) ? null : Number(eHold);
     patch.settle = (eSettle===''||eSettle===null) ? 0 : Number(eSettle);
-    patch.isOffice=eOffice; patch.isDorm=eDorm;
+    patch.isOffice=eOffice; patch.isDorm=eDorm; patch.isDaily=eDaily;
     await saveEmps(emps.map(x=>x.id===editId?{...x,...patch}:x));
     setEditId(null);
   }
@@ -869,22 +878,26 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
         E('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end',marginBottom:14}},
           E('div',{style:{flex:1,minWidth:110}},E('span',{className:'lbl'},'이름'),E('input',{className:'inp',value:nName,onChange:e=>setNName(e.target.value),placeholder:'홍길동'})),
           E('div',{style:{minWidth:140}},E('span',{className:'lbl'},'입사일'),E('input',{type:'date',className:'inp',value:nHire,onChange:e=>setNHire(e.target.value)})),
-          E('div',{style:{minWidth:100}},E('span',{className:'lbl'},'부서'),E('input',{className:'inp',value:nDept,onChange:e=>setNDept(e.target.value),placeholder:'설계팀'})),
-          E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'직위'),E('input',{className:'inp',value:nPos,onChange:e=>setNPos(e.target.value),placeholder:'사원'})),
+          E('div',{style:{minWidth:110}},E('span',{className:'lbl'},'부서'),deptSel(nDept,setNDept)),
+          E('div',{style:{minWidth:100}},E('span',{className:'lbl'},'직위'),posSel(nPos,setNPos)),
+          E('label',{style:{fontSize:12,display:'inline-flex',alignItems:'center',gap:4,padding:'6px 0'}},
+            E('input',{type:'checkbox',checked:nDaily,onChange:e=>setNDaily(e.target.checked)}),'일당'),
           E('button',{className:'btn pri',onClick:addEmp},'직원 추가')),
         E('div',{style:{fontSize:12,fontWeight:600,marginBottom:6}},'직원 목록 ('+activeEmps.length+')'),
         activeEmps.map(e=>editId===e.id
           ? E('div',{key:e.id,style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'flex-end',padding:10,background:'#eff6ff',borderRadius:8,marginBottom:6}},
               E('div',{style:{flex:1,minWidth:90}},E('span',{className:'lbl'},'이름'),E('input',{className:'inp',value:eName,onChange:ev=>setEName(ev.target.value)})),
               E('div',{style:{minWidth:130}},E('span',{className:'lbl'},'입사일'),E('input',{type:'date',className:'inp',value:eHire,onChange:ev=>setEHire(ev.target.value)})),
-              E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'부서'),E('input',{className:'inp',value:eDept,onChange:ev=>setEDept(ev.target.value)})),
-              E('div',{style:{minWidth:80}},E('span',{className:'lbl'},'직위'),E('input',{className:'inp',value:ePos,onChange:ev=>setEPos(ev.target.value)})),
+              E('div',{style:{minWidth:110}},E('span',{className:'lbl'},'부서'),deptSel(eDept,setEDept)),
+              E('div',{style:{minWidth:100}},E('span',{className:'lbl'},'직위'),posSel(ePos,setEPos)),
               E('div',{style:{minWidth:110}},E('span',{className:'lbl'},'보유연차(비우면 자동)'),E('input',{type:'number',step:0.5,className:'inp',value:eHold,onChange:ev=>setEHold(ev.target.value),placeholder:'자동: '+fmtDays(autoHold(eHire||e.hire))})),
               E('div',{style:{minWidth:90}},E('span',{className:'lbl'},'중간정산'),E('input',{type:'number',step:0.5,className:'inp',value:eSettle,onChange:ev=>setESettle(ev.target.value),placeholder:'0'})),
               E('label',{style:{fontSize:12,display:'inline-flex',alignItems:'center',gap:4,padding:'6px 0'}},
                 E('input',{type:'checkbox',checked:eOffice,onChange:ev=>setEOffice(ev.target.checked)}),'사무실'),
               E('label',{style:{fontSize:12,display:'inline-flex',alignItems:'center',gap:4,padding:'6px 0'}},
                 E('input',{type:'checkbox',checked:eDorm,onChange:ev=>setEDorm(ev.target.checked)}),'기숙사'),
+              E('label',{style:{fontSize:12,display:'inline-flex',alignItems:'center',gap:4,padding:'6px 0'}},
+                E('input',{type:'checkbox',checked:eDaily,onChange:ev=>setEDaily(ev.target.checked)}),'일당'),
               E('button',{className:'btn sm grn',onClick:saveEdit},'저장'),
               E('button',{className:'btn sm',onClick:()=>setEditId(null)},'취소'))
           : (()=>{ const b=balance(e,leaves);
@@ -892,6 +905,7 @@ function AdminManage({emps,leaves,saveEmps,saveLeaves}){
                 E('span',{style:{flex:1}},e.name+' · '+e.hire+' · '+e.dept+' '+e.position,
                   e.isOffice?E('span',{className:'badge b-blue',style:{marginLeft:6}},'사무실'):null,
                   e.isDorm?E('span',{className:'badge b-green',style:{marginLeft:4}},'기숙사'):null,
+                  e.isDaily?E('span',{className:'badge b-amber',style:{marginLeft:4}},'일당'):null,
                   E('span',{style:{color:'#94a3b8'}},'  | 보유 '+fmtDays(b.total)+(b.hasOverride?'(수동)':'')+' · 잔여 '+fmtDays(b.remain)+(b.settle?' · 정산 '+fmtDays(b.settle):''))),
                 E('button',{className:'btn sm',onClick:()=>startEdit(e)},'수정'),
                 E('button',{className:'btn sm',style:{color:'#92400e'},onClick:()=>retireEmp(e)},'퇴사'),
@@ -1391,7 +1405,11 @@ function MealTab({emps,leaves}){
     return ()=>{ un&&un(); };
   },[ymKey]);
 
-  const activeEmps=emps.filter(e=>e.status!=='resigned');
+  // 일당직은 급여 체계가 달라 정직원 뒤에 별도 그룹으로 분리 표시
+  const allActive=emps.filter(e=>e.status!=='resigned');
+  const regularEmps=allActive.filter(e=>!e.isDaily);
+  const dailyEmps=allActive.filter(e=>e.isDaily);
+  const activeEmps=[...regularEmps,...dailyEmps];
   const isHol=(ds,dt)=>{const w=dt.getDay();return w===0||w===6||!!HOLIDAYS[ds];};
   // 승인된 연차 → 날짜별 맵 {dateStr:{empId:{full,hours}}}
   const lvMap={};
@@ -1407,15 +1425,15 @@ function MealTab({emps,leaves}){
   });
   const entOf=(empId,ds)=>(att[empId]||{})[ds];
   const lvOf=(empId,ds)=>(lvMap[ds]||{})[empId];
-  // 전원 출근 토글: 전원(종일 연차자 제외)이 이미 체크돼 있으면 전체 해제, 아니면 전체 체크
+  // 전원 출근 토글: 정직원 전원(종일 연차자 제외) 기준. 일당직은 출근이 들쭉날쭉하므로 개별 체크.
   function allAttendOn(ds){
-    const eligible=activeEmps.filter(e=>{const lv=lvOf(e.id,ds);return !(lv&&lv.full);});
+    const eligible=regularEmps.filter(e=>{const lv=lvOf(e.id,ds);return !(lv&&lv.full);});
     return eligible.length>0&&eligible.every(e=>{const ent=(att[e.id]||{})[ds];return !!(ent&&ent.at);});
   }
   async function markAllAttend(ds){
     const on=allAttendOn(ds); // true면 해제, false면 체크
     const mo={...att};
-    activeEmps.forEach(e=>{
+    regularEmps.forEach(e=>{
       const lv=lvOf(e.id,ds);
       if(lv&&lv.full) return;
       const em={...(mo[e.id]||{})};
@@ -1472,10 +1490,12 @@ function MealTab({emps,leaves}){
       // 급여명세서에 인원별로 오려 붙일 수 있도록, 각 인원 위에 월일 헤더를 반복한다
       const headRow=[(m+1)+'월',...days.map(d=>d+'일'),'출근','조출h','잔업h','조출+잔업h','휴일h','출장일','출장식','실비(원)','잔여연차','식수','식비(원)','합계(원)'];
       const rows=[];
+      let dailySepDone=false;
       activeEmps.forEach(e=>{
+        if(e.isDaily&&!dailySepDone){ rows.push(['▼ 일당직 (급여 체계 별도)']); dailySepDone=true; }
         const st=monthStats(e);
         rows.push(headRow);
-        rows.push([e.name,...days.map(d=>dayCell(e,d).code),
+        rows.push([e.name+(e.isDaily?' (일당)':''),...days.map(d=>dayCell(e,d).code),
           st.workD,st.eoH,st.otH,st.extH,st.whH,st.btD,st.tripM,st.tripA,fmtDays(st.remain),st.meals,st.amount,st.total]);
       });
       const total=activeEmps.reduce((s,e)=>{const st=monthStats(e);return {meals:s.meals+st.meals,amt:s.amt+st.amount,tripA:s.tripA+st.tripA,tot:s.tot+st.total};},{meals:0,amt:0,tripA:0,tot:0});
@@ -1513,7 +1533,10 @@ function MealTab({emps,leaves}){
           E('table',null,
             E('thead',null,E('tr',null,
               ['이름','자동 반영',...(selHol?['근무시간(h)','조출(h)','잔업(h)','출장','숙박','출장아침','출장점심','출장저녁','회사 중식','회사 석식','석식 영수증']:['출근','조출(h)','잔업(h)','출장','숙박','출장아침','출장점심','출장저녁','회사 중식','회사 석식','석식 영수증']),'판정'].map(h=>E('th',{key:h},h)))),
-            E('tbody',null,activeEmps.map(e=>{
+            E('tbody',null,activeEmps.flatMap((e,i)=>{
+              const pre=(e.isDaily&&i===regularEmps.length)
+                ? [E('tr',{key:'dsep'},E('td',{colSpan:14,style:{background:'#fef3c7',color:'#92400e',fontWeight:700,padding:'4px 8px'}},'▼ 일당직 (급여 체계 별도 — 전원 출근 버튼에 포함되지 않음, 개별 체크)'))]
+                : [];
               const ent=entOf(e.id,selDate)||{};
               const lv=lvOf(e.id,selDate);
               const r=mealCalc(e,selHol,lv,ent);
@@ -1521,8 +1544,8 @@ function MealTab({emps,leaves}){
               const chk=(key)=>E('input',{type:'checkbox',checked:!!ent[key],onChange:ev=>setEntry(e.id,selDate,{[key]:ev.target.checked?1:0})});
               const hrs=(key)=>E('input',{type:'number',min:0,max:12,step:0.5,className:'inp',style:{width:64},value:ent[key]||'',placeholder:'0',
                 onChange:ev=>setEntry(e.id,selDate,{[key]:ev.target.value===''?0:Number(ev.target.value)})});
-              return E('tr',{key:e.id},
-                E('td',{style:{fontWeight:500}},e.name),
+              return [...pre,E('tr',{key:e.id},
+                E('td',{style:{fontWeight:500}},e.name+(e.isDaily?' (일당)':'')),
                 E('td',{style:{color:'#94a3b8',fontSize:11}},auto||'-'),
                 selHol
                   ? E(React.Fragment,null,
@@ -1551,7 +1574,7 @@ function MealTab({emps,leaves}){
                       E('td',{style:{textAlign:'center'}},chk('cd')),
                       E('td',{style:{textAlign:'center'}},e.isOffice?chk('rc'):E('span',{style:{color:'#cbd5e1'}},'–'))),
                 E('td',{style:{textAlign:'center',fontWeight:600,whiteSpace:'nowrap',color:(r.meals>0||r.tripAmt>0)?'#166534':'#94a3b8'}},
-                  r.meals+'식'+(r.tripAmt?' +실비 '+r.tripAmt.toLocaleString():'')));
+                  r.meals+'식'+(r.tripAmt?' +실비 '+r.tripAmt.toLocaleString():'')))];
             }))))
       )));
 
@@ -1580,10 +1603,13 @@ function MealTab({emps,leaves}){
             days.map(d=>{const ds=ymKey+'-'+String(d).padStart(2,'0');const dt=new Date(y,m,d);const hol=isHol(ds,dt);
               return E('th',{key:d,className:hol?'we':'',style:{color:dt.getDay()===0||HOLIDAYS[ds]?'#dc2626':dt.getDay()===6?'#2563eb':undefined}},d);}),
             ['출근','조출h','잔업h','조+잔h','휴일h','출장','출장식','실비(원)','잔여연차','식수','식비(원)','합계(원)'].map(h=>E('th',{key:h},h)))),
-          E('tbody',null,activeEmps.map((e,i)=>{
+          E('tbody',null,activeEmps.flatMap((e,i)=>{
             const st=totals[i];
-            return E('tr',{key:e.id},
-              E('td',{className:'nm'},e.name),
+            const rows=[];
+            if(e.isDaily&&i===regularEmps.length)
+              rows.push(E('tr',{key:'daily-sep'},E('td',{colSpan:daysInMonth+13,style:{background:'#fef3c7',color:'#92400e',fontWeight:700,textAlign:'left',padding:'4px 8px'}},'▼ 일당직 (급여 체계 별도)')));
+            rows.push(E('tr',{key:e.id},
+              E('td',{className:'nm'},e.name+(e.isDaily?' (일당)':'')),
               days.map(d=>{const ds=ymKey+'-'+String(d).padStart(2,'0');const dt=new Date(y,m,d);const hol=isHol(ds,dt);
                 const r=dayCell(e,d);
                 return E('td',{key:d,className:hol?'we':'',style:{cursor:'pointer'},title:e.name+' '+ds,onClick:()=>setSelDate(ds)},r.code);}),
@@ -1598,7 +1624,8 @@ function MealTab({emps,leaves}){
               E('td',{className:'tot'},fmtDays(st.remain)),
               E('td',{className:'tot'},st.meals),
               E('td',{className:'tot'},st.amount.toLocaleString()),
-              E('td',{className:'tot',style:{fontWeight:700}},st.total.toLocaleString()));
+              E('td',{className:'tot',style:{fontWeight:700}},st.total.toLocaleString())));
+            return rows;
           }),
           E('tr',null,
             E('td',{className:'nm',style:{fontWeight:700}},'합계'),
@@ -1633,10 +1660,13 @@ function MealPrint({y,m,daysInMonth,activeEmps,dayCell,totals,grand,isHol,ymKey}
       E('tbody',null,
         activeEmps.flatMap((e,i)=>{
           const st=totals[i];
-          return [
+          const pre=[];
+          if(e.isDaily&&activeEmps.findIndex(x=>x.isDaily)===i)
+            pre.push(E('tr',{key:'dsep'},E('td',{colSpan:daysInMonth+13,style:{...td,background:'#f1efe8',fontWeight:700,textAlign:'left'}},'▼ 일당직 (급여 체계 별도)')));
+          return [...pre,
             headRow('h'+e.id),
             E('tr',{key:e.id},
-              E('td',{style:{...td,fontWeight:600}},e.name),
+              E('td',{style:{...td,fontWeight:600}},e.name+(e.isDaily?' (일당)':'')),
               days.map(d=>E('td',{key:d,style:td},dayCell(e,d).code)),
               E('td',{style:td},st.workD),E('td',{style:td},st.eoH||''),E('td',{style:td},st.otH||''),E('td',{style:{...td,fontWeight:600}},st.extH||''),E('td',{style:td},st.whH||''),E('td',{style:td},st.btD||''),E('td',{style:td},st.tripM||''),E('td',{style:td},st.tripA?st.tripA.toLocaleString():''),E('td',{style:td},fmtDays(st.remain)),
               E('td',{style:td},st.meals),E('td',{style:td},st.amount.toLocaleString()),E('td',{style:{...td,fontWeight:700}},st.total.toLocaleString()))
