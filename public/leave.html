@@ -223,7 +223,7 @@ const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+Stri
 // ent: {at:출근, eo:조출시간, ot:잔업시간, wh:휴일근무시간,
 //       bt:출장(기록·출장일수용), sb:숙박(기록용) — 둘 다 식비 영향 없음,
 //       tb/tl/td:출장 아침/점심/저녁 체크 — 1식 10,000원 고정 지급, 해당 정액 끼니 자동 대체,
-//       cl:회사중식제공, cd:회사석식제공, rc:석식 영수증(사무실 석식 증빙)}
+//       cb:회사조식제공(기록용, 조출 조식과 겹치면 미지급), cl:회사중식제공, cd:회사석식제공, rc:석식 영수증(사무실 석식 증빙)}
 // 반환: meals=정액(9,000원) 식수 / trip=출장 끼니 수 / tripAmt=출장 식비(끼니 수 × 10,000원)
 const TRIP_MEAL=10000; // 출장 식비 1식 고정
 function mealCalc(emp,isHol,lv,ent){
@@ -239,7 +239,7 @@ function mealCalc(emp,isHol,lv,ent){
     const wh=Number(ent.wh)||0, ot=Number(ent.ot)||0, eo=Number(ent.eo)||0;
     if(wh<=0&&ot<=0&&eo<=0&&!ent.rc&&!onTrip)
       return {meals:0,trip:0,tripAmt:0,code:'/'};            // 휴일 미근무
-    const bfast=eo>=2&&!tAmts[0];                            // 조식: 조출 2시간 이상 (출장아침 금액 입력 시 실비로 대체)
+    const bfast=eo>=2&&!tAmts[0]&&!ent.cb;                   // 조식: 조출 2시간 이상 (출장아침·회사 조식 제공 시 미지급)
     const lunch=(emp.isOffice?wh>0:wh>=4)&&!ent.cl&&!tAmts[1]; // 현장: 실근무 4시간(반차 기준) 이상
     const dinner=otDinner(ot)&&!ent.cd&&!tAmts[2];
     const p=[]; if(wh>0)p.push('휴'+wh); if(eo>0)p.push('조'+eo); if(ot>0)p.push('잔'+ot);
@@ -258,7 +258,7 @@ function mealCalc(emp,isHol,lv,ent){
   }
   const code=(parts.length?parts.join(''):(mark?'':'○'))+mark;
   if(h!=null&&h>4) return {meals:0,trip,tripAmt,code};        // 반차(4시간) 초과 시간차: 정액 미지원
-  const bfast=eo>=2&&!tAmts[0];                               // 조식: 조출 2시간 이상 (출장아침 시 실비로 대체)
+  const bfast=eo>=2&&!tAmts[0]&&!ent.cb;                      // 조식: 조출 2시간 이상 (출장아침·회사 조식 제공 시 미지급)
   const lunch=!ent.cl&&!tAmts[1];                             // 중식: 출근 시 정액 (출장점심 시 실비로 대체)
   const dinner=(otDinner(ot)||emp.isDorm)&&!ent.cd&&!tAmts[2];// 석식: 잔업(사무실 영수증)·기숙사 (출장저녁 시 실비로 대체)
   const meals=(bfast?1:0)+(lunch?1:0)+(dinner?1:0);
@@ -1532,10 +1532,10 @@ function MealTab({emps,leaves}){
         E('div',{style:{overflowX:'auto'}},
           E('table',null,
             E('thead',null,E('tr',null,
-              ['이름','자동 반영',...(selHol?['근무시간(h)','조출(h)','잔업(h)','출장','숙박','출장아침','출장점심','출장저녁','회사 중식','회사 석식','석식 영수증']:['출근','조출(h)','잔업(h)','출장','숙박','출장아침','출장점심','출장저녁','회사 중식','회사 석식','석식 영수증']),'판정'].map(h=>E('th',{key:h},h)))),
+              ['이름','자동 반영',...(selHol?['근무시간(h)','조출(h)','잔업(h)','출장','숙박','출장아침','출장점심','출장저녁','회사 조식','회사 중식','회사 석식','석식 영수증']:['출근','조출(h)','잔업(h)','출장','숙박','출장아침','출장점심','출장저녁','회사 조식','회사 중식','회사 석식','석식 영수증']),'판정'].map(h=>E('th',{key:h},h)))),
             E('tbody',null,activeEmps.flatMap((e,i)=>{
               const pre=(e.isDaily&&i===regularEmps.length)
-                ? [E('tr',{key:'dsep'},E('td',{colSpan:14,style:{background:'#fef3c7',color:'#92400e',fontWeight:700,padding:'4px 8px'}},'▼ 일당직 (급여 체계 별도 — 전원 출근 버튼에 포함되지 않음, 개별 체크)'))]
+                ? [E('tr',{key:'dsep'},E('td',{colSpan:15,style:{background:'#fef3c7',color:'#92400e',fontWeight:700,padding:'4px 8px'}},'▼ 일당직 (급여 체계 별도 — 전원 출근 버튼에 포함되지 않음, 개별 체크)'))]
                 : [];
               const ent=entOf(e.id,selDate)||{};
               const lv=lvOf(e.id,selDate);
@@ -1558,6 +1558,7 @@ function MealTab({emps,leaves}){
                       E('td',{style:{textAlign:'center'}},chk('tb')),
                       E('td',{style:{textAlign:'center'}},chk('tl')),
                       E('td',{style:{textAlign:'center'}},chk('td')),
+                      E('td',{style:{textAlign:'center'}},chk('cb')),
                       E('td',{style:{textAlign:'center'}},chk('cl')),
                       E('td',{style:{textAlign:'center'}},chk('cd')),
                       E('td',{style:{textAlign:'center'}},e.isOffice?chk('rc'):E('span',{style:{color:'#cbd5e1'}},'–')))
@@ -1570,6 +1571,7 @@ function MealTab({emps,leaves}){
                       E('td',{style:{textAlign:'center'}},chk('tb')),
                       E('td',{style:{textAlign:'center'}},chk('tl')),
                       E('td',{style:{textAlign:'center'}},chk('td')),
+                      E('td',{style:{textAlign:'center'}},chk('cb')),
                       E('td',{style:{textAlign:'center'}},chk('cl')),
                       E('td',{style:{textAlign:'center'}},chk('cd')),
                       E('td',{style:{textAlign:'center'}},e.isOffice?chk('rc'):E('span',{style:{color:'#cbd5e1'}},'–'))),
