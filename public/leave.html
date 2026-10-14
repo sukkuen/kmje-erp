@@ -1184,6 +1184,8 @@ function HrTab({emps}){
   const emp=emps.find(e=>e.id===selEmp)||(person?{id:person.id,name:person.name,dept:'인명부',position:person.ptype||'일당직',hire:person.hire||'-'}:undefined);
   async function addPerson(){
     if(!npName.trim()){ alert('이름을 입력하세요.'); return; }
+    const dup=emps.find(e=>e.status!=='resigned'&&e.name===npName.trim());
+    if(dup&&!confirm('"'+npName.trim()+'"은(는) 이미 직원·기록 관리에 등록된 재직자입니다.\n재직자는 위 [인원 선택]의 "재직자" 그룹에서 바로 선택하면 되고, 인명부에 또 추가하면 중복됩니다.\n그래도 인명부에 별도 인원으로 추가하시겠습니까?')) return;
     const p={id:uid(),name:npName.trim(),ptype:npType,phone:npPhone.trim()};
     const next=[...people,p]; setPeople(next); await dbSet('hr_people',next);
     if(p.phone){ const np={...profiles,[p.id]:{...(profiles[p.id]||{}),name:p.name,phone:p.phone}}; setProfiles(np); await dbSet('hr_profiles',np); }
@@ -1290,11 +1292,16 @@ function HrTab({emps}){
         E('div',{style:{marginBottom:10,maxWidth:320}},E('span',{className:'lbl'},'인원 선택'),
           E('select',{className:'inp',value:selEmp,onChange:e=>setSelEmp(e.target.value)},
             E('option',{value:''},'인원을 선택하세요'),
-            (()=>{ // 재직자: 부서별 그룹 (임원 → 부서 가나다 → 직위 순)
-              const sorted=sortEmps(emps.filter(e=>e.status!=='resigned'));
+            (()=>{ // 재직자: 부서별 그룹 (임원 → 부서 가나다 → 직위 순). 일당직은 별도 그룹으로 분리
+              const active=emps.filter(e=>e.status!=='resigned');
+              const sorted=sortEmps(active.filter(e=>!e.isDaily));
+              const daily=sortEmps(active.filter(e=>e.isDaily));
               const depts=[...new Set(sorted.map(e=>e.dept||'-'))];
-              return depts.map(d=>E('optgroup',{key:'d'+d,label:'재직자 · '+d},
+              const groups=depts.map(d=>E('optgroup',{key:'d'+d,label:'재직자 · '+d},
                 sorted.filter(e=>(e.dept||'-')===d).map(e=>E('option',{key:e.id,value:e.id},e.name+(e.position&&e.position!=='-'?' ('+e.position+')':'')))));
+              if(daily.length) groups.push(E('optgroup',{key:'daily',label:'일당직'},
+                daily.map(e=>E('option',{key:e.id,value:e.id},e.name+' ('+(e.dept||'-')+')'))));
+              return groups;
             })(),
             people.length>0&&E('optgroup',{label:'계약·일당직 (인명부)'},
               [...people].sort((a,b)=>(a.ptype||'').localeCompare(b.ptype||'','ko')||(a.name||'').localeCompare(b.name||'','ko')).map(p=>E('option',{key:p.id,value:p.id},p.name+' ('+(p.ptype||'일당직')+')'))),
