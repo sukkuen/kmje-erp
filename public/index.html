@@ -142,6 +142,8 @@ const PAY_TYPES = ["계약금","1차기성","2차기성","3차기성","4차기�
 const INIT_MANAGERS = ["김경래","이충영","조용집","박명호","고석근","이일섭"];
 const mkP = (type,amount,inv=false,invD=null,recD=null) => ({id:uid(),type,amount:amount||0,invoiceIssued:!!inv,invoiceDate:invD,receivedDate:recD,paidDate:null});
 const oBalance = o => (o.projectAmount||0) - o.payments.filter(p=>p.receivedDate).reduce((s,p)=>s+(p.amount||0),0);
+// 수주번호 뒤 일련번호(등록순) 추출. 예: "2643-004" → 4
+const orderSeq = o => { const p=(o.orderNo||'').split('-'); return p.length===2 ? (parseInt(p[1])||0) : 0; };
 // 수주의 계산서 발행 요약 배지 상태 (요청 > 부분발행 순으로 표시)
 const invSummary = o => {
   const ps = o.payments||[];
@@ -637,11 +639,11 @@ function OrderList({orders,saveOrders,managers,clients}){
     return true;
   }).sort((a,b)=>{
     let va,vb;
-    if(sortKey==='no'){va=a.no||0;vb=b.no||0;}
+    if(sortKey==='no'){va=orderSeq(a);vb=orderSeq(b);}
     else if(sortKey==='client'){va=a.clientName||'';vb=b.clientName||'';}
     else if(sortKey==='manager'){va=a.manager||'';vb=b.manager||'';}
     else if(sortKey==='status'){const ORDER={'미수':0,'진행중':1,'완료':2,'금액미정':3};va=ORDER[getSt(a)[0]]??9;vb=ORDER[getSt(b)[0]]??9;}
-    else{va=a.no||0;vb=b.no||0;}
+    else{va=orderSeq(a);vb=orderSeq(b);}
     if(typeof va==='string')return sortDir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
     return sortDir==='asc'?va-vb:vb-va;
   });
