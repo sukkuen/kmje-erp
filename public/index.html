@@ -134,16 +134,25 @@ function FmtInput({value,onChange,style,placeholder,step}){
 }
 const abbrCur = (n,cur) => cur==='USD' ? '$'+Number(n||0).toLocaleString('en-US') : abbr(n)+'원';
 const ym = s => s?.slice(0,7)??null;
-const today = new Date().toISOString().slice(0,10);
-const thisM = new Date().toISOString().slice(0,7);
-const prevM = (()=>{const d=new Date();d.setMonth(d.getMonth()-1);return d.toISOString().slice(0,7);})();
-const todayStr = new Date().toISOString().slice(0,10);
+const _ymd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const today = _ymd(new Date());
+const thisM = today.slice(0,7);
+const prevM = (()=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return _ymd(d).slice(0,7);})();
+const todayStr = today;
 const PAY_TYPES = ["계약금","1차기성","2차기성","3차기성","4차기성","5차기성","잔금"];
 const INIT_MANAGERS = ["김경래","이충영","조용집","박명호","고석근","이일섭"];
 const mkP = (type,amount,inv=false,invD=null,recD=null) => ({id:uid(),type,amount:amount||0,invoiceIssued:!!inv,invoiceDate:invD,receivedDate:recD,paidDate:null});
 const oBalance = o => (o.projectAmount||0) - o.payments.filter(p=>p.receivedDate).reduce((s,p)=>s+(p.amount||0),0);
 // 수주번호 뒤 일련번호(등록순) 추출. 예: "2643-004" → 4
 const orderSeq = o => { const p=(o.orderNo||'').split('-'); return p.length===2 ? (parseInt(p[1])||0) : 0; };
+// 주어진 날짜의 익월 말일 (YYYY-MM-DD). 예: 2026-07-15 → 2026-08-31
+const lastDayNextMonth = ds => {
+  if(!ds) return '';
+  const d=new Date(ds); if(isNaN(d)) return '';
+  const last=new Date(d.getFullYear(), d.getMonth()+2, 0);
+  const mm=String(last.getMonth()+1).padStart(2,'0'), dd=String(last.getDate()).padStart(2,'0');
+  return last.getFullYear()+'-'+mm+'-'+dd;
+};
 // 수주의 계산서 발행 요약 배지 상태 (요청 > 부분발행 순으로 표시)
 const invSummary = o => {
   const ps = o.payments||[];
@@ -338,6 +347,14 @@ function ExpandedDetail({order,onUpdate}){
   const GISENG=['1차기성','2차기성','3차기성','4차기성','5차기성'];
   const setP=(i,f,v)=>{const p=order.payments.map((x,j)=>j===i?{...x,[f]:v}:x);onUpdate({...order,payments:p});};
   const setSP=(sid,pi,f,v)=>{const s=order.subcontractors.map(s=>s.id!==sid?s:{...s,payments:s.payments.map((x,j)=>j===pi?{...x,[f]:v}:x)});onUpdate({...order,subcontractors:s});};
+  // 협력업체 예상지출일 자동제안: 같은 구분의 발주처 수금일(입금∥예상) → 익월 말일
+  const subAutoExpect=(sid,pi,subPayType)=>{
+    const match=(order.payments||[]).find(p=>p.type===subPayType&&(p.expectedDate||p.receivedDate));
+    let ref=match&&(match.receivedDate||match.expectedDate);
+    if(!ref){const ds=(order.payments||[]).map(p=>p.receivedDate||p.expectedDate).filter(Boolean).sort();ref=ds[0];}
+    if(!ref){alert('먼저 발주처 결제항목에 예상수금일(또는 입금일)을 입력하세요.');return;}
+    setSP(sid,pi,'expectedPayDate',lastDayNextMonth(ref));
+  };
   const delP=id=>{onUpdate({...order,payments:order.payments.filter(p=>p.id!==id)});};
   const addGiseng=()=>{
     const existing=order.payments.filter(p=>GISENG.includes(p.type)).map(p=>p.type);
@@ -356,7 +373,7 @@ function ExpandedDetail({order,onUpdate}){
     order.payments.length>0&&E('div',{style:{marginBottom:8}},
       E('div',{className:'sec-lbl'},'수금 현황 (발주처)'),
       E('table',null,
-        E('thead',null,E('tr',null,...['구분','결제조건','금액','비율','세금계산서 발행일','입금일','상태',''].map(h=>E('th',{key:h,style:['금액'].includes(h)?{textAlign:'right'}:['비율'].includes(h)?{textAlign:'center',color:'#94a3b8'}:h==='결제조건'?{color:'#94a3b8',maxWidth:120}:{}},h)))),
+        E('thead',null,E('tr',null,...['구분','결제조건','금액','비율','예상수금일','세금계산서 발행일','입금일','상태',''].map(h=>E('th',{key:h,style:['금액'].includes(h)?{textAlign:'right'}:['비율'].includes(h)?{textAlign:'center',color:'#94a3b8'}:h==='결제조건'?{color:'#94a3b8',maxWidth:120}:h==='예상수금일'?{color:'#0d9488'}:{}},h)))),
         E('tbody',null,...order.payments.map((p,i)=>{const[sl,sc]=pSt(p);return E('tr',{key:p.id},
           E('td',{style:{fontWeight:500,color:'#1e40af'}},p.type),
           E('td',{style:{fontSize:11,color:'#64748b',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.condition||'—'),
@@ -366,6 +383,7 @@ function ExpandedDetail({order,onUpdate}){
               ?(Math.round(p.amount/order.projectAmount*1000)/10).toFixed(1)+'%'
               :'—'
           ),
+          E('td',null,E('input',{type:'date',value:p.expectedDate||'',onChange:e=>setP(i,'expectedDate',e.target.value||null),title:'예상 수금일 (자금예측에 반영)',style:{...iS,width:130,borderColor:'#5eead4'}})),
           E('td',null,E('input',{type:'date',value:p.invoiceDate||'',onChange:e=>setP(i,'invoiceDate',e.target.value||null),style:{...iS,width:130}})),
           E('td',null,E('input',{type:'date',value:p.receivedDate||'',onChange:e=>setP(i,'receivedDate',e.target.value||null),style:{...iS,width:130}})),
           E('td',null,(()=>{const clickable=!p.receivedDate&&!p.invoiceDate;return E('span',{className:`badge ${sc}`,style:{cursor:clickable?'pointer':'default'},title:clickable?(p.invoiceRequested?'클릭: 발행요청 취소':'클릭: 세금계산서 발행 요청'):'',onClick:clickable?()=>setP(i,'invoiceRequested',!p.invoiceRequested):null},sl);})()),
@@ -382,7 +400,7 @@ function ExpandedDetail({order,onUpdate}){
         )
       ),
       E('table',null,
-        E('thead',null,E('tr',null,...['구분','결제조건','금액','비율','계산서 수취일','지급일','상태'].map(h=>E('th',{key:h,style:['금액'].includes(h)?{textAlign:'right'}:['비율'].includes(h)?{textAlign:'center',color:'#94a3b8'}:h==='결제조건'?{color:'#94a3b8'}:{}},h)))),
+        E('thead',null,E('tr',null,...['구분','결제조건','금액','비율','예상지출일','계산서 수취일','지급일','상태'].map(h=>E('th',{key:h,style:['금액'].includes(h)?{textAlign:'right'}:['비율'].includes(h)?{textAlign:'center',color:'#94a3b8'}:h==='결제조건'?{color:'#94a3b8'}:h==='예상지출일'?{color:'#0d9488'}:{}},h)))),
         E('tbody',null,...sub.payments.map((p,pi)=>{const[sl,sc]=sSt(p);return E('tr',{key:p.id},
           E('td',null,p.type),
           E('td',{style:{fontSize:11,color:'#64748b',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.condition||'—'),
@@ -392,6 +410,10 @@ function ExpandedDetail({order,onUpdate}){
               ?(Math.round(p.amount/sub.contractAmount*1000)/10).toFixed(1)+'%'
               :'—'
           ),
+          E('td',null,E('div',{style:{display:'flex',gap:4,alignItems:'center'}},
+            E('input',{type:'date',value:p.expectedPayDate||'',onChange:e=>setSP(sub.id,pi,'expectedPayDate',e.target.value||null),title:'예상 지출일 (자금예측에 반영)',style:{...iS,width:118,borderColor:'#5eead4'}}),
+            E('button',{className:'btn sm',title:'수금일의 익월 말일로 자동 입력',style:{padding:'2px 5px',fontSize:10},onClick:()=>subAutoExpect(sub.id,pi,p.type)},'익월말')
+          )),
           E('td',null,E('input',{type:'date',value:p.invoiceDate||'',onChange:e=>setSP(sub.id,pi,'invoiceDate',e.target.value||null),style:{...iS,width:130}})),
           E('td',null,E('input',{type:'date',value:p.paidDate||'',onChange:e=>setSP(sub.id,pi,'paidDate',e.target.value||null),style:{...iS,width:130}})),
           E('td',null,E('span',{className:`badge ${sc}`},sl))
@@ -942,7 +964,7 @@ function ManagerModal({managers,onSave,onClose}){
 // ── CashFlow ─────────────────────────────────────────────
 function CashFlow({orders,cfData,saveCf,cfPassword,savePw,onLock}){
   const E=React.createElement;
-  const months=Array.from({length:12},(_,i)=>{const d=new Date(2026,i,1);return d.toISOString().slice(0,7);});
+  const months=Array.from({length:12},(_,i)=>'2026-'+String(i+1).padStart(2,'0'));
   const[sel,setSel]=useState(thisM);
   const prevYm=(()=>{const d=new Date(sel+'-01');d.setMonth(d.getMonth()-1);return d.toISOString().slice(0,7);})();
 
@@ -1189,6 +1211,72 @@ function CashFlow({orders,cfData,saveCf,cfPassword,savePw,onLock}){
 }
 
 
+// ── CashForecast ─────────────────────────────────────────
+function CashForecast({orders}){
+  const E=React.createElement;
+  const [openM,setOpenM]=useState(null);
+  const events=[];
+  (orders||[]).forEach(o=>{
+    if(o.currency==='USD') return;
+    (o.payments||[]).forEach(p=>{ if(p.expectedDate&&!p.receivedDate&&(p.amount||0)>0) events.push({date:p.expectedDate,kind:'in',amount:p.amount||0,name:o.clientName,type:p.type,orderNo:o.orderNo}); });
+    (o.subcontractors||[]).forEach(sub=>{ (sub.payments||[]).forEach(p=>{ if(p.expectedPayDate&&!p.paidDate&&(p.amount||0)>0) events.push({date:p.expectedPayDate,kind:'out',amount:p.amount||0,name:sub.name,type:p.type,orderNo:o.orderNo}); }); });
+  });
+  events.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  const mMap={};
+  events.forEach(e=>{const k=e.date.slice(0,7);if(!mMap[k])mMap[k]={ym:k,events:[]};mMap[k].events.push(e);});
+  const months=Object.values(mMap).sort((a,b)=>a.ym<b.ym?-1:1);
+  return E('div',null,
+    E('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}},
+      E('div',{style:{fontSize:16,fontWeight:700}},'자금 예측'),
+      E('span',{style:{fontSize:12,color:'#64748b'}},'프로젝트별 예상 수금 · 협력업체 예상 지출 일정')
+    ),
+    events.length===0
+      ? E('div',{className:'card',style:{textAlign:'center',padding:'40px 20px',color:'#64748b',fontSize:13}},
+          E('div',{style:{marginBottom:8,fontSize:14,fontWeight:600,color:'#1e293b'}},'아직 예상일이 입력되지 않았습니다'),
+          '수주현황에서 수주를 펼쳐 결제항목의 ',E('b',null,'예상수금일'),'을 입력하면 여기에 일정이 표시됩니다. 협력업체는 ',E('b',null,'예상지출일'),'(익월말 버튼)을 입력하세요.')
+      : E('div',{className:'card'},
+          E('div',{className:'card-hdr'},E('span',null,'예상 수금·지출 일정'),E('span',{style:{fontSize:11,color:'#94a3b8',fontWeight:400,marginLeft:6}},'(월을 클릭하면 펼쳐집니다)')),
+          E('div',{style:{overflowX:'auto'}},
+            E('table',null,
+              E('thead',null,E('tr',null,
+                E('th',{style:{width:24}}),
+                E('th',null,'월'),
+                E('th',{style:{textAlign:'right'}},'건수')
+              )),
+              E('tbody',null,...months.map(m=>{
+                const open=openM===m.ym;
+                const inCnt=m.events.filter(e=>e.kind==='in').length, outCnt=m.events.length-inCnt;
+                return E(Fragment,{key:m.ym},
+                  E('tr',{style:{cursor:'pointer'},onClick:()=>setOpenM(open?null:m.ym)},
+                    E('td',{style:{textAlign:'center',color:'#94a3b8',fontSize:11}},open?'▼':'▶'),
+                    E('td',{style:{fontWeight:600}},m.ym),
+                    E('td',{style:{textAlign:'right',fontSize:11,color:'#64748b'}},'수금 '+inCnt+' · 지급 '+outCnt)
+                  ),
+                  open&&E('tr',{key:m.ym+'_e'},
+                    E('td',{colSpan:3,style:{padding:0,background:'#f8fafc'}},
+                      E('div',{style:{padding:'8px 12px'}},
+                        E('table',null,
+                          E('thead',null,E('tr',null,...['날짜','수주번호','대상','수금/지급','구분','금액'].map((h,i)=>E('th',{key:i,style:['금액'].includes(h)?{textAlign:'right'}:{}},h)))),
+                          E('tbody',null,...m.events.map((e,i)=>E('tr',{key:i},
+                            E('td',{style:{fontSize:11,color:'#64748b',whiteSpace:'nowrap'}},e.date),
+                            E('td',{className:'mono',style:{fontSize:11,color:'#1e40af'}},e.orderNo),
+                            E('td',{style:{fontWeight:500}},e.name),
+                            E('td',null,E('span',{className:'badge '+(e.kind==='in'?'b-green':'b-red')},e.kind==='in'?'수금':'지급')),
+                            E('td',{style:{fontSize:11,color:'#64748b'}},e.type),
+                            E('td',{className:'mono',style:{textAlign:'right',color:e.kind==='in'?'#059669':'#dc2626'}},(e.kind==='in'?'+':'-')+fmt(e.amount))
+                          ))
+                        )
+                      )
+                    )
+                  )
+                ));
+              }))
+            )
+          )
+        )
+  );
+}
+
 // ── App ──────────────────────────────────────────────────
 function App(){
   const E=React.createElement;
@@ -1253,6 +1341,7 @@ function App(){
     {id:"dashboard",label:"대시보드"},
     {id:"clients",label:"거래처 관리"},
     {id:"orders",label:"수주현황"},
+    {id:"forecast",label:"자금예측"},
     {id:"cashflow",label:"현금흐름"},
   ];
 
@@ -1271,6 +1360,7 @@ function App(){
       tab==="dashboard"&&E(Dashboard,{orders,saveOrders:saveO}),
       tab==="clients"&&E(ClientList,{clients,saveClients:saveCl,orders,saveOrders:saveO}),
       tab==="orders"&&E(OrderList,{orders,saveOrders:saveO,managers:mgrs,clients}),
+      tab==="forecast"&&E(CashForecast,{orders}),
       tab==="cashflow"&&E(CashFlow,{orders,cfData,saveCf,cfPassword,savePw,onLock:()=>{setCfUnlocked(false);setTab("dashboard");}})
     )
   );
