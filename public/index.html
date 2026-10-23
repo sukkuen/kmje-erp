@@ -65,6 +65,35 @@ tbody tr:last-child td{border-bottom:none;}
 .prog-bar{display:flex;align-items:center;gap:6px;}
 .prog-bg{flex:1;height:4px;background:#e2e8f0;border-radius:2px;}
 .prog-fill{height:100%;border-radius:2px;}
+/* ── 계약서 문서 ── */
+.contract-doc{background:#fff;color:#000;width:210mm;max-width:100%;margin:0 auto;padding:16mm 18mm;font-size:13px;line-height:1.5;}
+.contract-doc .cd-title{text-align:center;font-size:30px;letter-spacing:14px;font-weight:700;margin:0 0 26px;}
+.cd-field{border:none;border-bottom:1px solid #cbd5e1;font-family:inherit;font-size:inherit;color:#000;padding:1px 4px;background:transparent;outline:none;}
+.cd-field:focus{border-bottom-color:#1e40af;background:#eff6ff;}
+.cd-ta{border:1px dashed #e2e8f0;border-radius:4px;font-family:inherit;font-size:inherit;color:#000;line-height:1.6;padding:3px 6px;background:transparent;outline:none;width:100%;resize:none;overflow:hidden;}
+.cd-ta:focus{border-color:#1e40af;background:#eff6ff;}
+.cd-sec{font-weight:700;margin:13px 0 3px;}
+.cd-clause{margin:2px 0;}
+.cd-cover .cd-clause{padding-left:20px;}
+.cd-clause-t{font-weight:700;}
+.cd-cover{transform-origin:top left;}
+.contract-doc input[type=date].cd-field{width:108px;}
+@media print{ .contract-doc input[type=date].cd-field{width:88px;} .contract-doc input[type=date].cd-field::-webkit-calendar-picker-indicator{display:none;} }
+@media print{
+  .no-print{display:none !important;}
+  .hdr{display:none !important;}
+  body{background:#fff;}
+  .main{padding:0 !important;max-width:none !important;}
+  .modal-bg{position:static !important;inset:auto !important;background:transparent !important;padding:0 !important;margin:0 !important;overflow:visible !important;display:block !important;}
+  .modal{box-shadow:none !important;width:100% !important;max-width:none !important;padding:0 !important;border-radius:0 !important;}
+  .modal>div{max-height:none !important;overflow:visible !important;}
+  .contract-doc{width:100% !important;max-width:none !important;padding:0 !important;margin:0 !important;}
+  .cd-cover-wrap{overflow:hidden;page-break-after:always;break-after:page;}
+  .cd-field{border-bottom:none !important;background:transparent !important;color:#000 !important;}
+  .cd-ta{border:none !important;background:transparent !important;padding:0 !important;color:#000 !important;}
+  .cd-clause{page-break-inside:avoid;}
+  @page{size:A4;margin:14mm;}
+}
 </style>
 </head>
 <body>
@@ -153,6 +182,48 @@ const lastDayNextMonth = ds => {
   const mm=String(last.getMonth()+1).padStart(2,'0'), dd=String(last.getDate()).padStart(2,'0');
   return last.getFullYear()+'-'+mm+'-'+dd;
 };
+// ── 계약서 관련 ──
+const KMJE_INFO = { name:'㈜케이엠제이', bizNo:'', ceo:'고명진', address:'충청남도 천안시 동남구 성남면 대흥 1길 153-34' };
+// 숫자 → 한글금액 (일금 ○○○원정)
+const _hanNum = n => {
+  n=Math.floor(Math.abs(Number(n)||0)); if(n===0) return '영';
+  const d1=['','일','이','삼','사','오','육','칠','팔','구'], d10=['','십','백','천'], d4=['','만','억','조','경'];
+  let res='', g=0;
+  while(n>0){ let part=n%10000; n=Math.floor(n/10000); if(part>0){ let s='',p=part,pos=0; while(p>0){ const dg=p%10; if(dg>0) s=d1[dg]+d10[pos]+s; p=Math.floor(p/10); pos++; } res=s+d4[g]+res; } g++; }
+  return res;
+};
+const amountKor = n => '일금 '+_hanNum(n)+'원정';
+// 계약 종류별 지체상금 분자 (계약금액의 1000분의 N)
+const DELAY_RATE = { client:1, vendor:3 };
+// 조항 기본값 (종류·하자보증기간 반영, 발주자/수주자 라벨 공용)
+const defaultClauses = (type, defectMonths) => {
+  const r = DELAY_RATE[type]||1;
+  const dm = defectMonths||12;
+  return [
+    ['계약','"발주자"와 "수주자"는 상기 계약내용의 금액을 승인하고 상호 신뢰와 성실로써 본 계약을 이행한다.'],
+    ['대금지급','"수주자"는 납품 기일 내에 공사 완료 또는 시설 설치 완료 후 "수주자"의 대금 청구에 의하며, "발주자"는 검수하여 대금을 지급한다.'],
+    ['운반설치','"수주자"는 "발주자"가 지정하는 장소까지 "수주자"의 부담으로 운반하여 설치한다.'],
+    ['사전승인','"수주자"는 설계도, 소요자재, 재질, 공정도 및 사양서, 시방서, 사용설명서 등을 "발주자"에게 사전에 제출하여 승인받아야 한다.'],
+    ['양도금지','"수주자"는 "발주자"의 승인 없이 본 계약에서 발생되는 권리와 의무, 담보 및 저당권 설정 등으로 제3자에게 양도·승계할 수 없다.'],
+    ['변경승인 및 중간검수','제4조의 내용을 변경하고자 할 때 "수주자"는 "발주자"에게 사전 통보하고 반드시 "발주자"의 승인 하에 시행하여야 하며, 본 계약 시 제시된 소요 자재의 재질·규격·용량 등을 중간 검수한 결과 부적합하게 시공·제작하였을 때는 재제작 및 재시공하여야 하고, 이로 인하여 추가 소요되는 제반비용 일체를 "수주자"가 부담한다.'],
+    ['납품','"수주자"가 납품 시에는 생산과정·품질·검사서 등을 제출하여야 하며, 납품 전이라도 "발주자"는 수시로 "수주자"의 공장을 방문하여 중간검수를 할 수 있고 "수주자"는 납품일을 준수하여야 한다.'],
+    ['연장·중지','천재지변 및 불가항력으로 인하여 납기에 영향을 미치는 상황이 발생하였을 때 "수주자"는 지체 없이 그 사유를 "발주자"에게 통보하고 상호 협의에 의하여 납기를 연장 또는 중지할 수 있다.'],
+    ['지체상금','"수주자"의 일방적인 사정으로 납품기일 내에 납품하지 못할 경우에는 지연일수 1일에 대하여 계약금액의 1000분의 '+r+'에 해당하는 지체상금을 잔금에서 공제한다.'],
+    ['중도해약','다음 각 호에 해당할 때는 본 계약을 중도에 해약할 수 있다.\n 1) "수주자"의 귀책사유로 납기 내 또는 경과 후 상당한 시일이 소요되어 계약 이행이 불가능하다고 인정될 때\n 2) 정당한 사유 없이 착수시기를 지연시키고 계약을 이행하지 않을 때\n 3) 제출된 설계도와 상이하게 제작·시공하고 있을 때'],
+    ['손해배상','제10조에 의거 계약 해지 시에는 "수주자"는 "발주자"에게 계약금액의 10%를 손해 배상하여야 한다.'],
+    ['하자이행','하자이행기간은 설비 납품 후 또는 공사 완료 후 상기 "5. 하자이행증권"에 명시한 하자보증기간으로 하며, "수주자"가 시공 또는 제작 불량으로 인한 하자가 발생 시는 지체 없이 이를 "수주자"의 부담으로 보수하여야 한다.'],
+    ['상호협의','본 계약의 이행상 문제점의 발생, 기재사항의 해석 등은 일반 상관례에 준한다.'],
+    ['책임','본 계약 이행 기간 중에 "수주자"의 사유로 인하여 발생되는 안전사고 및 인적·물적·법적 일체의 책임은 전적으로 "수주자"에게 있다.'],
+    ['비밀유지','"수주자"는 본 계약과 관련하여 "발주자"로부터 제공받은 설계도·사양서·기술자료 및 영업비밀을 제3자에게 누설하거나 계약 목적 외에 사용할 수 없다.'],
+    ['관할법원','"발주자"와 "수주자" 사이에 본 계약에 관한 소송상의 분쟁이 발생한 때에는 "발주자"의 사무소 소재지 관할 민사지방법원을 관할 법원으로 한다.']
+  ].map((c,i)=>({no:i+1,title:c[0],body:c[1]}));
+};
+// 계약서 문서번호 생성 (KMJ-YYMMDD-NN)
+const makeContractNo = (contracts, dateStr) => {
+  const ymd=(dateStr||today).replace(/-/g,'').slice(2); // YYMMDD
+  const n=(contracts||[]).filter(c=>(c.contractNo||'').indexOf('KMJ-'+ymd+'-')===0).length+1;
+  return 'KMJ-'+ymd+'-'+String(n).padStart(2,'0');
+};
 // 수주의 계산서 발행 요약 배지 상태 (요청 > 부분발행 순으로 표시)
 const invSummary = o => {
   const ps = o.payments||[];
@@ -227,7 +298,7 @@ const INIT = [
 
 
 const CD=[["00","자재"],["01","켐트로스"],["02","삼양엔씨켐"],["03","켐텍스코리아"],["04","케이에스광학"],["05","신성소재"],["06","신성켐오일"],["07","동인화학(송탄공장)"],["08","동인화학(부여공장)"],["09","에스피씨"],["10","한서켐"],["11","에이치에스바이오"],["12","P&H Tech"],["13","오메가테크놀로지"],["14","가나C&P"],["15","엔지켐"],["16","국방과학연구소"],["17","SK케미칼"],["18","동국생명과학"],["19","동양피앤이"],["20","한국바이오젠"],["21","에스에스팜"],["22","성신냉열"],["23","협회"],["24","케이엠제이"],["25","동면사무소"],["26","플로우텍"],["27","씨티케미칼"],["28","KS랩"],["29","주일산업"],["30","트리엔"],["31","송원산업"],["32","자경케미칼"],["33","위너켐"],["34","스노젠"],["35","와우에프엔비"],["36","케미랜드"],["37","케미폴리오"],["38","신아티엔씨"],["39","이에스"],["40","벨이앤씨"],["41","현성테크노"],["42","동양케미칼"],["43","그린케미칼"],["44","알케미스트"],["45","덕산테코피아"],["46","제일PLATEX산업"],["47","쎄타텍"],["48","한화솔루션"],["49","이앤에프"],["50","이피켐텍"],["51","포리바이오"],["52","케이씨씨실리콘"],["53","엘에스켐"],["54","동성케미칼"],["55","엠에스팜"],["56","LXMMA"],["57","디엔에스"],["58","케이에쓰화학"],["59","제이제이다산"],["60","이녹스에코엠"],["61","희성촉매"],["62","앤아이씨"],["63","대지건설"],["64","켐트로닉스"],["65","덕산네오룩스"],["66","TFC"],["67","이엔에프테크놀로지"],["68","이니스트에스티"],["69","글루가"],["70","YCIA"],["71","피에스케미칼"],["72","뉴타입이엔씨"],["73","저장모리타신소재"],["74","JHC"],["75","미원상사"],["76","타코마테크놀로지"]];
-const INIT_CLIENTS=CD.map(([code,name])=>({id:uid(),code,name,ceo:"",phone:"",email:"",address:"",note:""}));
+const INIT_CLIENTS=CD.map(([code,name])=>({id:uid(),code,name,ceo:"",phone:"",email:"",address:"",note:"",bizNo:""}));
 // ── SetupScreen ─────────────────────────────────────────
 function SetupScreen() {
   return React.createElement('div',{className:'setup-screen'},
@@ -796,7 +867,7 @@ function OrderList({orders,saveOrders,managers,clients}){
 // ── ClientModal ──────────────────────────────────────────
 function ClientModal({client,onSave,onClose}){
   const E=React.createElement;
-  const[f,setF]=useState(client||{id:"",code:"",name:"",ceo:"",phone:"",email:"",address:"",note:""});
+  const[f,setF]=useState(client||{id:"",code:"",name:"",ceo:"",phone:"",email:"",address:"",note:"",bizNo:""});
   const sf=(k,v)=>setF(x=>({...x,[k]:v}));
   const iS={background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 9px",color:"#1e293b",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%"};
   const lbl=t=>E("div",{style:{fontSize:11,color:"#64748b",marginBottom:3}},t);
@@ -818,6 +889,7 @@ function ClientModal({client,onSave,onClose}){
         E("div",null,lbl("이메일"),E("input",{style:iS,value:f.email,onChange:e=>sf("email",e.target.value)})),
         E("div",null,lbl("내부 담당자"),E("input",{style:iS,value:f.note,onChange:e=>sf("note",e.target.value)}))
       ),
+      E("div",{style:{marginBottom:10}},lbl("사업자등록번호 (계약서용)"),E("input",{style:iS,value:f.bizNo||"",onChange:e=>sf("bizNo",e.target.value),placeholder:"000-00-00000"})),
       E("div",{style:{marginBottom:18}},lbl("주소"),E("input",{style:iS,value:f.address,onChange:e=>sf("address",e.target.value)})),
       E("div",{style:{display:"flex",justifyContent:"flex-end",gap:8}},
         E("button",{className:"btn",onClick:onClose},"취소"),
@@ -1277,6 +1349,249 @@ function CashForecast({orders}){
   );
 }
 
+// ── VendorModal (협력업체 명부) ──────────────────────────
+function VendorModal({vendors,onSave,onClose}){
+  const E=React.createElement;
+  const [list,setList]=useState(vendors||[]);
+  const [srch,setSrch]=useState("");
+  const up=(id,k,v)=>setList(l=>l.map(x=>x.id===id?{...x,[k]:v}:x));
+  const add=()=>setList(l=>[{id:uid(),name:"",bizNo:"",ceo:"",address:"",phone:""},...l]);
+  const rm=id=>setList(l=>l.filter(x=>x.id!==id));
+  const iS={background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:5,padding:"5px 7px",fontSize:11,fontFamily:"inherit",outline:"none",width:"100%"};
+  const shown=list.filter(v=>!srch||(v.name||"").includes(srch));
+  return E("div",{className:"modal-bg",onClick:e=>{if(e.target===e.currentTarget)onClose();}},
+    E("div",{className:"modal",style:{maxWidth:900}},
+      E("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}},
+        E("div",{style:{fontSize:15,fontWeight:700}},"협력업체 명부"),
+        E("button",{className:"btn sm",onClick:onClose},"✕")
+      ),
+      E("div",{style:{display:"flex",gap:8,marginBottom:10}},
+        E("input",{className:"inp",placeholder:"협력업체명 검색",value:srch,onChange:e=>setSrch(e.target.value),style:{width:200}}),
+        E("button",{className:"btn pri sm",onClick:add},"+ 추가")
+      ),
+      E("div",{style:{maxHeight:"55vh",overflowY:"auto"}},
+        E("table",null,
+          E("thead",null,E("tr",null,...["상호명","사업자번호","대표이사","주소","전화",""].map((h,i)=>E("th",{key:i},h)))),
+          E("tbody",null,...shown.map(v=>E("tr",{key:v.id},
+            E("td",null,E("input",{style:iS,value:v.name||"",onChange:e=>up(v.id,"name",e.target.value)})),
+            E("td",null,E("input",{style:iS,value:v.bizNo||"",onChange:e=>up(v.id,"bizNo",e.target.value),placeholder:"000-00-00000"})),
+            E("td",null,E("input",{style:iS,value:v.ceo||"",onChange:e=>up(v.id,"ceo",e.target.value)})),
+            E("td",{style:{minWidth:200}},E("input",{style:iS,value:v.address||"",onChange:e=>up(v.id,"address",e.target.value)})),
+            E("td",null,E("input",{style:iS,value:v.phone||"",onChange:e=>up(v.id,"phone",e.target.value)})),
+            E("td",{style:{width:40}},E("button",{className:"btn sm dng",onClick:()=>rm(v.id)},"✕"))
+          )))
+        )
+      ),
+      E("div",{style:{display:"flex",justifyContent:"flex-end",gap:8,marginTop:14}},
+        E("button",{className:"btn",onClick:onClose},"취소"),
+        E("button",{className:"btn pri",onClick:()=>onSave(list)},"저장")
+      )
+    )
+  );
+}
+
+// ── ContractEditor (계약서 작성/편집) ────────────────────
+function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClose}){
+  const E=React.createElement;
+  const blank=(type)=>({
+    id:"",contractNo:"",date:today,status:"작성중",type:type||"vendor",docTitle:"납 품 계 약 서",
+    orderId:"",orderNo:"",
+    orderer: type==="client"?{name:"",bizNo:"",ceo:"",address:""}:{...KMJE_INFO},
+    supplier: type==="client"?{...KMJE_INFO}:{name:"",bizNo:"",ceo:"",address:""},
+    title:"",spec:"",amount:0,vatSeparate:true,startDate:"",endDate:"",deliveryPlace:'"발주자"가 지정한 장소',
+    payPrinciple: type==="vendor"?"모든 대금은 원청으로부터 지급 받은 후 지급을 원칙으로 한다.":"",
+    pays:[{label:"계약금",pct:30,amount:0,cond:"계산서 발행 및 계약이행증권 제출 후 15일 이내"},
+          {label:"중도금",pct:50,amount:0,cond:"공정 진행률 70% 이상 검수 후 세금계산서 발행 후 익월 말"},
+          {label:"잔금",pct:20,amount:0,cond:"시운전 완료 후 세금계산서 발행 후 익월 말"}],
+    bonds:{perf:{pct:10,amount:0},advance:{pct:0,amount:0},defect:{pct:10,amount:0}},
+    defectMonths:12,etc:"",
+    clauses:defaultClauses(type||"vendor",12)
+  });
+  const [c,setC]=useState(()=> (contract&&contract.clauses)?contract:blank(contract&&contract.type||"vendor"));
+  const set=patch=>setC(x=>({...x,...patch}));
+  const setParty=(side,k,v)=>setC(x=>({...x,[side]:{...x[side],[k]:v}}));
+  const setPay=(i,k,v)=>setC(x=>({...x,pays:x.pays.map((p,j)=>j===i?{...p,[k]:v}:p)}));
+  const setBond=(key,k,v)=>setC(x=>({...x,bonds:{...x.bonds,[key]:{...x.bonds[key],[k]:v}}}));
+  const setClause=(i,v)=>setC(x=>({...x,clauses:x.clauses.map((cl,j)=>j===i?{...cl,body:v}:cl)}));
+  const taRef=el=>{if(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}};
+  const payCond=t=> t==="계약금"?"계산서 발행 및 계약이행증권 제출 후 15일 이내" : /기성|중도/.test(t)?"공정 진행률 검수 후 세금계산서 발행 후 익월 말" : t==="잔금"?"시운전 완료 후 세금계산서 발행 후 익월 말":"";
+  const recalc=(amt,x)=>({
+    pays:x.pays.map(p=>({...p,amount:Math.round(amt*(Number(p.pct)||0)/100)})),
+    bonds:{perf:{...x.bonds.perf,amount:Math.round(amt*(Number(x.bonds.perf.pct)||0)/100)},advance:{...x.bonds.advance,amount:Math.round(amt*(Number(x.bonds.advance.pct)||0)/100)},defect:{...x.bonds.defect,amount:Math.round(amt*(Number(x.bonds.defect.pct)||0)/100)}}
+  });
+  const setAmount=v=>setC(x=>{const amt=Number(v)||0;return {...x,amount:amt,...recalc(amt,x)};});
+  const changeType=type=>setC(x=>({...x,type,
+    orderer: type==="client"?{name:"",bizNo:"",ceo:"",address:""}:{...KMJE_INFO},
+    supplier: type==="client"?{...KMJE_INFO}:{name:"",bizNo:"",ceo:"",address:""},
+    payPrinciple: type==="vendor"?(x.payPrinciple||"모든 대금은 원청으로부터 지급 받은 후 지급을 원칙으로 한다."):"",
+    clauses:defaultClauses(type,x.defectMonths)}));
+  const [selOrderId,setSelOrderId]=useState(c.orderId||"");
+  const [selSubId,setSelSubId]=useState("");
+  const selOrder=(orders||[]).find(o=>o.id===selOrderId);
+  const autoFill=()=>{
+    const o=selOrder; if(!o){alert("수주를 먼저 선택하세요.");return;}
+    let amt,pays,orderer,supplier;const title=o.description||"";
+    if(c.type==="vendor"){
+      const sub=(o.subcontractors||[]).find(s=>s.id===selSubId);
+      if(!sub){alert("협력업체를 선택하세요.");return;}
+      amt=sub.contractAmount||0;
+      pays=(sub.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*100):0,amount:p.amount||0,cond:payCond(p.type)}));
+      const v=(vendors||[]).find(x=>x.name===sub.name)||{};
+      supplier={name:v.name||sub.name,bizNo:v.bizNo||"",ceo:v.ceo||"",address:v.address||""};
+      orderer={...KMJE_INFO};
+    } else {
+      amt=o.projectAmount||0;
+      pays=(o.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*100):0,amount:p.amount||0,cond:payCond(p.type)}));
+      const cl=(clients||[]).find(x=>x.name===o.clientName)||{};
+      orderer={name:cl.name||o.clientName,bizNo:cl.bizNo||"",ceo:cl.ceo||"",address:cl.address||""};
+      supplier={...KMJE_INFO};
+    }
+    if(!pays.length)pays=c.pays;
+    setC(x=>({...x,orderId:o.id,orderNo:o.orderNo,title,amount:amt,pays,startDate:o.startDate||"",endDate:o.endDate||"",orderer,supplier,...recalc(amt,{...x,pays})}));
+  };
+  const doSave=()=>{const rec={...c};if(!rec.id)rec.id=uid();if(!rec.contractNo)rec.contractNo=makeContractNo(contracts,rec.date);onSave(rec);};
+  // 인쇄 시 갑지(앞장)를 1페이지에 맞게 자동 축소
+  useEffect(()=>{
+    const regrow=()=>document.querySelectorAll(".contract-doc .cd-ta").forEach(t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";});
+    const fit=()=>{
+      const doc=document.querySelector(".contract-doc"),wrap=document.querySelector(".cd-cover-wrap"),cover=document.querySelector(".cd-cover");
+      if(!doc||!wrap||!cover)return;
+      const prevW=doc.style.width, prevP=doc.style.padding; doc.style.width="688px"; doc.style.padding="0";
+      regrow(); // 인쇄 폭 기준으로 글칸 높이 재계산 (빈 공간 제거)
+      cover.style.transform="none"; wrap.style.height="auto"; void cover.offsetHeight;
+      const h=cover.scrollHeight, availH=1010;
+      const s=h>availH?Math.max(0.35,availH/h):1;
+      cover.style.transformOrigin="top left";
+      cover.style.transform=s<1?"scale("+s.toFixed(4)+")":"none";
+      wrap.style.height=s<1?Math.ceil(h*s)+"px":"auto";
+      doc.style.width=prevW; doc.style.padding=prevP;
+    };
+    const reset=()=>{const wrap=document.querySelector(".cd-cover-wrap"),cover=document.querySelector(".cd-cover");if(cover)cover.style.transform="";if(wrap)wrap.style.height="";regrow();};
+    window.addEventListener("beforeprint",fit);
+    window.addEventListener("afterprint",reset);
+    return ()=>{window.removeEventListener("beforeprint",fit);window.removeEventListener("afterprint",reset);};
+  },[]);
+  const fld=(val,on,style)=>E("input",{className:"cd-field",value:val||"",onChange:e=>on(e.target.value),style});
+  const sizeInput=el=>{if(el){el.style.width="2px";el.style.width=(el.scrollWidth+4)+"px";}};
+  const nameFld=(val,on,extra)=>E("input",{className:"cd-field",value:val||"",ref:sizeInput,onChange:e=>{on(e.target.value);sizeInput(e.target);},style:{textAlign:"center",minWidth:"70px",...(extra||{})}});
+  const bondRow=(key,label)=>{const b=c.bonds[key];return E("div",{className:"cd-clause"},
+    E("span",null,"▶ "+label+" : "),
+    E("span",{className:"mono"},"₩"+fmt(b.amount)),E("span",null," ( 계약금액의 "),
+    E("input",{className:"cd-field",type:"number",value:b.pct,onChange:e=>setBond(key,"pct",Number(e.target.value)),onBlur:()=>setC(x=>({...x,...recalc(x.amount,x)})),style:{width:46,textAlign:"right"}}),
+    E("span",null," % )"));};
+  return E("div",{className:"modal-bg",style:{padding:"16px"}},
+    E("div",{className:"modal",style:{width:"96vw",maxWidth:"1000px",padding:0}},
+      E("div",{className:"no-print",style:{padding:"14px 18px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",position:"sticky",top:0,background:"#fff",zIndex:2,borderRadius:"12px 12px 0 0"}},
+        E("div",{style:{fontSize:14,fontWeight:700,marginRight:4}},"계약서 "+(c.id?"수정":"작성")),
+        E("select",{className:"inp",style:{width:140},value:c.type,onChange:e=>changeType(e.target.value)},
+          E("option",{value:"vendor"},"협력업체 계약"),E("option",{value:"client"},"고객사 계약")),
+        E("select",{className:"inp",style:{width:190},value:selOrderId,onChange:e=>{setSelOrderId(e.target.value);setSelSubId("");}},
+          E("option",{value:""},"-- 수주 선택 --"),
+          ...(orders||[]).map(o=>E("option",{key:o.id,value:o.id},(o.orderNo||"")+" "+o.clientName))),
+        c.type==="vendor"&&selOrder&&E("select",{className:"inp",style:{width:160},value:selSubId,onChange:e=>setSelSubId(e.target.value)},
+          E("option",{value:""},"-- 협력업체 --"),
+          ...((selOrder.subcontractors)||[]).map(s=>E("option",{key:s.id,value:s.id},s.name))),
+        E("button",{className:"btn sm",onClick:autoFill},"↧ 자동채움"),
+        E("div",{style:{marginLeft:"auto",display:"flex",gap:6}},
+          E("button",{className:"btn sm",onClick:()=>window.print()},"🖨 인쇄"),
+          E("button",{className:"btn pri sm",onClick:doSave},"저장"),
+          E("button",{className:"btn sm",onClick:onClose},"닫기"))
+      ),
+      E("div",{style:{maxHeight:"80vh",overflowY:"auto"}},
+        E("div",{className:"contract-doc"},
+          E("div",{className:"cd-cover-wrap"},E("div",{className:"cd-cover"},
+          E("div",{style:{textAlign:"right",fontSize:11,color:"#64748b",marginBottom:4}},"문서번호 ",fld(c.contractNo||makeContractNo(contracts,c.date),v=>set({contractNo:v}),{width:130,textAlign:"right",fontSize:11})),
+          E("input",{className:"cd-field cd-title",value:c.docTitle,onChange:e=>set({docTitle:e.target.value}),style:{width:"100%",textAlign:"center",borderBottom:"none"}}),
+          E("div",{style:{margin:"8px 0 14px",lineHeight:1.9}},
+            nameFld(c.orderer.name,v=>setParty("orderer","name",v)),' (이하 : "발주자"라 한다)와 ',
+            nameFld(c.supplier.name,v=>setParty("supplier","name",v)),' (이하 "수주자"라 한다)는 다음과 같이 계약을 체결한다.'),
+          E("div",{className:"cd-sec"},"1. 계약 내용"),
+          E("div",{className:"cd-clause",style:{display:"flex",alignItems:"flex-start",gap:4}},E("span",{style:{whiteSpace:"nowrap"}},"▶ 품 명 : "),E("textarea",{className:"cd-ta",ref:taRef,value:c.title,onChange:e=>{set({title:e.target.value});taRef(e.target);},rows:1,style:{flex:1}})),
+          E("div",{className:"cd-clause"},"▶ 규 격 : ",fld(c.spec,v=>set({spec:v}),{width:"70%"})),
+          E("div",{className:"cd-clause"},"▶ 계약금액 : ",E("b",null,amountKor(c.amount)),"  (₩",E("input",{className:"cd-field mono",type:"text",inputMode:"numeric",value:fmt(c.amount),ref:sizeInput,onChange:e=>{setAmount(e.target.value.replace(/[^0-9]/g,""));sizeInput(e.target);},style:{textAlign:"right",minWidth:"40px"}}),")  ",c.vatSeparate?"V.A.T 별도":""),
+          E("div",{className:"cd-clause"},"▶ 계약기간 : ",E("input",{className:"cd-field",type:"date",value:c.startDate,onChange:e=>set({startDate:e.target.value})})," ~ ",E("input",{className:"cd-field",type:"date",value:c.endDate,onChange:e=>set({endDate:e.target.value})})),
+          E("div",{className:"cd-clause"},"▶ 납품장소 : ",fld(c.deliveryPlace,v=>set({deliveryPlace:v}),{width:"60%"})),
+          E("div",{className:"cd-sec"},"2. 대금 지급 방법 (V.A.T 별도)"),
+          c.payPrinciple!==""&&E("div",{className:"cd-clause",style:{fontWeight:600}},fld(c.payPrinciple,v=>set({payPrinciple:v}),{width:"90%"})),
+          ...c.pays.map((p,i)=>E("div",{className:"cd-clause",key:"p"+i,style:{display:"flex",gap:6,alignItems:"flex-start",flexWrap:"wrap"}},
+            E("span",null,"▶ "),E("input",{className:"cd-field",value:p.label,onChange:e=>setPay(i,"label",e.target.value),style:{width:64}}),
+            E("input",{className:"cd-field",type:"number",value:p.pct,onChange:e=>setPay(i,"pct",Number(e.target.value)),style:{width:44,textAlign:"right"}}),E("span",null,"% "),
+            E("span",{className:"mono"},"₩"+fmt(p.amount)),E("span",null," - "),
+            E("textarea",{className:"cd-ta",ref:taRef,value:p.cond,onChange:e=>{setPay(i,"cond",e.target.value);taRef(e.target);},rows:1,style:{flex:1,minWidth:200}}))),
+          E("div",{className:"cd-sec"},"3. 계약이행증권"),bondRow("perf","계약 시 계약이행증권 제출"),
+          E("div",{className:"cd-sec"},"4. 선급금보증증권"),bondRow("advance","계약 시 선급금보증증권 제출"),
+          E("div",{className:"cd-sec"},"5. 하자이행증권"),bondRow("defect","계약 시 하자이행증권 제출"),
+          E("div",{className:"cd-clause"},"▶ 하자보증기간 : ",E("input",{className:"cd-field",type:"number",value:c.defectMonths,onChange:e=>set({defectMonths:Number(e.target.value)}),style:{width:50,textAlign:"right"}})," 개월"),
+          E("div",{className:"cd-sec"},"6. 기타 조건"),
+          E("textarea",{className:"cd-ta",ref:taRef,value:c.etc,onChange:e=>{set({etc:e.target.value});taRef(e.target);},rows:1,placeholder:"(선택) 특약·기타 조건"}),
+          E("div",{style:{textAlign:"center",margin:"22px 0 6px"}},"위와 같이 계약을 체결하고 계약서 2통을 작성, 쌍방이 날인 후 각각 1통씩 보관한다."),
+          E("div",{style:{textAlign:"center",margin:"8px 0 20px"}},fld(c.date,v=>set({date:v}),{width:130,textAlign:"center"})),
+          ...["orderer","supplier"].map(side=>E("div",{key:side,style:{marginBottom:14}},
+            E("div",null,'"'+(side==="orderer"?"발주자":"수주자")+'"  ',nameFld(c[side].name,v=>setParty(side,"name",v),{textAlign:"left"})),
+            E("div",{style:{paddingLeft:52}},fld(c[side].address,v=>setParty(side,"address",v),{width:"80%"})),
+            E("div",{style:{paddingLeft:52}},"대표이사  ",fld(c[side].ceo,v=>setParty(side,"ceo",v),{width:120}),"  (인)")))
+          )),
+          E("div",{className:"cd-clauses"},
+          ...c.clauses.map((cl,i)=>E("div",{className:"cd-clause",key:"c"+i},
+            E("div",{className:"cd-clause-t"},"제 "+cl.no+"조 ("+cl.title+")"),
+            E("textarea",{className:"cd-ta",ref:taRef,value:cl.body,onChange:e=>{setClause(i,e.target.value);taRef(e.target);},rows:1})))
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── ContractList (계약서 히스토리) ───────────────────────
+function ContractList({contracts,orders,vendors,clients,saveContracts,saveVendors}){
+  const E=React.createElement;
+  const [editing,setEditing]=useState(null);
+  const [showVendors,setShowVendors]=useState(false);
+  const [srch,setSrch]=useState("");
+  const list=(contracts||[]).filter(c=>!srch||[(c.supplier&&c.supplier.name),(c.orderer&&c.orderer.name),c.title,c.contractNo].some(v=>(v||"").includes(srch))).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.contractNo||"").localeCompare(a.contractNo||""));
+  const saveOne=rec=>{const ex=(contracts||[]).find(x=>x.id===rec.id);if(ex)saveContracts(contracts.map(x=>x.id===rec.id?rec:x));else saveContracts([...(contracts||[]),rec]);setEditing(null);};
+  const del=id=>{if(window.confirm("이 계약서를 삭제하시겠습니까?"))saveContracts((contracts||[]).filter(x=>x.id!==id));};
+  const dup=rec=>setEditing({...rec,id:"",contractNo:"",date:today,status:"작성중"});
+  const other=c=>c.type==="vendor"?(c.supplier&&c.supplier.name):(c.orderer&&c.orderer.name);
+  if(editing)return E(ContractEditor,{contract:editing,contracts,orders,vendors,clients,onSave:saveOne,onClose:()=>setEditing(null)});
+  return E(Fragment,null,
+    showVendors&&E(VendorModal,{vendors,onSave:v=>{saveVendors(v);setShowVendors(false);},onClose:()=>setShowVendors(false)}),
+    E("div",null,
+      E("div",{className:"toolbar"},
+        E("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+          E("input",{className:"inp",placeholder:"문서번호/거래처/품명 검색",value:srch,onChange:e=>setSrch(e.target.value),style:{width:220}}),
+          E("span",{style:{fontSize:11,color:"#64748b"}},list.length+"건")),
+        E("div",{style:{display:"flex",gap:8}},
+          E("button",{className:"btn",onClick:()=>setShowVendors(true)},"협력업체 명부"),
+          E("button",{className:"btn",onClick:()=>setEditing({type:"client"})},"+ 고객사 계약서"),
+          E("button",{className:"btn pri",onClick:()=>setEditing({type:"vendor"})},"+ 협력업체 계약서"))),
+      E("div",{className:"card"},
+        E("div",{style:{overflowX:"auto"}},
+          E("table",null,
+            E("thead",null,E("tr",null,...["문서번호","종류","수주번호","상대방","품명","계약금액","작성일","상태",""].map((h,i)=>E("th",{key:i,style:h==="계약금액"?{textAlign:"right"}:{}},h)))),
+            E("tbody",null, list.length===0
+              ? E("tr",null,E("td",{colSpan:9,style:{textAlign:"center",padding:"30px",color:"#94a3b8"}},"작성된 계약서가 없습니다. 우측 상단에서 새 계약서를 만드세요."))
+              : list.map(c=>E("tr",{key:c.id},
+                E("td",{className:"mono",style:{fontSize:11,fontWeight:600,color:"#1e40af"}},c.contractNo),
+                E("td",null,E("span",{className:"badge "+(c.type==="vendor"?"b-amber":"b-blue")},c.type==="vendor"?"협력업체":"고객사")),
+                E("td",{className:"mono",style:{fontSize:11}},c.orderNo||"—"),
+                E("td",{style:{fontWeight:500}},other(c)||"—"),
+                E("td",{style:{color:"#64748b",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},c.title||"—"),
+                E("td",{className:"mono",style:{textAlign:"right"}},fmt(c.amount)+"원"),
+                E("td",{style:{fontSize:11,color:"#64748b"}},c.date),
+                E("td",null,E("span",{className:"badge "+(c.status==="완료"?"b-green":"b-gray")},c.status||"작성중")),
+                E("td",{style:{padding:"4px 6px"}},E("div",{style:{display:"flex",gap:4}},
+                  E("button",{className:"btn sm",onClick:()=>setEditing(c)},"열기"),
+                  E("button",{className:"btn sm",onClick:()=>dup(c)},"복제"),
+                  E("button",{className:"btn sm dng",onClick:()=>del(c.id)},"삭제")))
+              )))
+          )
+        )
+      )
+    )
+  );
+}
+
 // ── App ──────────────────────────────────────────────────
 function App(){
   const E=React.createElement;
@@ -1289,6 +1604,8 @@ function App(){
   const[showPwModal,setShowPwModal]=useState(false);
   const[showMgrModal,setShowMgrModal]=useState(false);
   const[cfPassword,setCfPassword]=useState("1234");
+  const[vendors,setVendors]=useState([]);
+  const[contracts,setContracts]=useState([]);
 
   useEffect(()=>{
     if(!FB_OK){
@@ -1308,17 +1625,21 @@ function App(){
       if(st&&st.cfPassword)setCfPassword(st.cfPassword);
       if(st&&st.managers)setManagers(st.managers);
     });
-    Promise.all([dbGet("orders"),dbGet("clients"),dbGet("cashflow"),dbGet("settings")]).then(([o,cl,cf,st])=>{
+    const u5=dbListen("vendors",v=>setVendors(v||[]));
+    const u6=dbListen("contracts",cs=>setContracts(cs||[]));
+    Promise.all([dbGet("orders"),dbGet("clients"),dbGet("cashflow"),dbGet("settings"),dbGet("vendors"),dbGet("contracts")]).then(([o,cl,cf,st,vn,ct])=>{
       if(!o)dbSet("orders",INIT).then(()=>setOrders(INIT)); else setOrders(o);
       if(!cl)dbSet("clients",INIT_CLIENTS).then(()=>setClients(INIT_CLIENTS)); else setClients(cl);
       setCfData(cf||{});
+      setVendors(vn||[]);
+      setContracts(ct||[]);
       const pw=(st&&st.cfPassword)||"1234";
       const mgrs=(st&&st.managers)||INIT_MANAGERS;
       setCfPassword(pw);
       setManagers(mgrs);
       if(!st)dbSet("settings",{cfPassword:pw,managers:mgrs});
     });
-    return()=>{if(u1)u1();if(u2)u2();if(u3)u3();if(u4)u4();};
+    return()=>{if(u1)u1();if(u2)u2();if(u3)u3();if(u4)u4();if(u5)u5();if(u6)u6();};
   },[]);
 
   const saveO=o=>{setOrders(o);dbSet("orders",o);};
@@ -1326,6 +1647,8 @@ function App(){
   const saveCf=cf=>{setCfData(cf);dbSet("cashflow",cf);};
   const savePw=pw=>{setCfPassword(pw);dbSet("settings",{cfPassword:pw,managers:managers||INIT_MANAGERS});};
   const saveMgrs=mgrs=>{setManagers(mgrs);dbSet("settings",{cfPassword,managers:mgrs});setShowMgrModal(false);};
+  const saveVendors=v=>{setVendors(v);dbSet("vendors",v);};
+  const saveContracts=cs=>{setContracts(cs);dbSet("contracts",cs);};
 
   const handleTab=id=>{
     if(id==="cashflow"&&!cfUnlocked){setShowPwModal(true);return;}
@@ -1341,6 +1664,7 @@ function App(){
     {id:"dashboard",label:"대시보드"},
     {id:"clients",label:"거래처 관리"},
     {id:"orders",label:"수주현황"},
+    {id:"contracts",label:"계약서"},
     {id:"forecast",label:"자금예측"},
     {id:"cashflow",label:"현금흐름"},
   ];
@@ -1360,6 +1684,7 @@ function App(){
       tab==="dashboard"&&E(Dashboard,{orders,saveOrders:saveO}),
       tab==="clients"&&E(ClientList,{clients,saveClients:saveCl,orders,saveOrders:saveO}),
       tab==="orders"&&E(OrderList,{orders,saveOrders:saveO,managers:mgrs,clients}),
+      tab==="contracts"&&E(ContractList,{contracts,orders,vendors,clients,saveContracts,saveVendors}),
       tab==="forecast"&&E(CashForecast,{orders}),
       tab==="cashflow"&&E(CashFlow,{orders,cfData,saveCf,cfPassword,savePw,onLock:()=>{setCfUnlocked(false);setTab("dashboard");}})
     )
