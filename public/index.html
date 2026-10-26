@@ -439,6 +439,24 @@ function ExpandedDetail({order,onUpdate}){
   const pSt=p=>{if(p.receivedDate)return['입금완료','b-green'];if(p.invoiceDate)return['발행완료','b-blue'];if(p.invoiceRequested)return['요청됨','b-yellow'];return['미발행','b-gray'];};
   const sSt=p=>{if(p.paidDate)return['지급완료','b-green'];if(p.invoiceDate)return['계산서수취','b-blue'];return['미수취','b-gray'];};
   const iS={background:'#fff',border:'1px solid #e2e8f0',borderRadius:5,padding:'4px 7px',color:'#1e293b',fontSize:11,fontFamily:'inherit',outline:'none'};
+  // 보증보험 (계약이행/선급금/하자이행) 해당·발행 체크 — 결제구조와 무관
+  const BOND_TYPES=[['perf','계약이행'],['advance','선급금'],['defect','하자이행']];
+  const bondVal=(bonds,k)=>(bonds&&bonds[k])||{};
+  const setOrderBond=(k,f,v)=>onUpdate({...order,bonds:{...order.bonds,[k]:{...bondVal(order.bonds,k),[f]:v}}});
+  const setSubBond=(sid,k,f,v)=>{const s=order.subcontractors.map(su=>su.id!==sid?su:{...su,bonds:{...su.bonds,[k]:{...bondVal(su.bonds,k),[f]:v}}});onUpdate({...order,subcontractors:s});};
+  // 컴팩트 한 줄: 보증보험  ☐계약이행  ☐선급금  ☐하자이행 → 해당 체크 시 발행·발행일 노출
+  const bondStrip=(bonds,onBond,label)=>E('div',{style:{display:'flex',flexWrap:'wrap',alignItems:'center',gap:16,fontSize:11,padding:'7px 2px 3px',borderTop:'1px dashed #e2e8f0',marginTop:3}},
+    E('span',{style:{fontWeight:700,color:label?'#f97316':'#64748b'}},label||'보증보험'),
+    ...BOND_TYPES.map(([k,lbl])=>{const b=bondVal(bonds,k);const req=!!b.required;return E('span',{key:k,style:{display:'inline-flex',alignItems:'center',gap:5}},
+      E('label',{style:{display:'inline-flex',alignItems:'center',gap:3,cursor:'pointer'}},
+        E('input',{type:'checkbox',checked:req,onChange:e=>onBond(k,'required',e.target.checked),style:{width:14,height:14,cursor:'pointer'}}),
+        E('span',{style:{fontWeight:req?600:400,color:req?'#1e40af':'#94a3b8'}},lbl)),
+      req&&E('label',{style:{display:'inline-flex',alignItems:'center',gap:3,cursor:'pointer',color:'#64748b'}},
+        E('input',{type:'checkbox',checked:!!b.issued,onChange:e=>onBond(k,'issued',e.target.checked),style:{width:14,height:14,cursor:'pointer'}}),
+        E('span',null,'발행')),
+      req&&b.issued&&E('input',{type:'date',value:b.issuedDate||'',onChange:e=>onBond(k,'issuedDate',e.target.value||null),style:{...iS,width:118,padding:'2px 5px'}})
+    );})
+  );
   return E('div',{className:'exp-area'},
     E('div',{style:{fontSize:11,color:'#64748b',marginBottom:10}},'💡 세금계산서 발행일 입력 시 현금흐름 탭에 자동 반영됩니다'),
     order.payments.length>0&&E('div',{style:{marginBottom:8}},
@@ -460,7 +478,8 @@ function ExpandedDetail({order,onUpdate}){
           E('td',null,(()=>{const clickable=!p.receivedDate&&!p.invoiceDate;return E('span',{className:`badge ${sc}`,style:{cursor:clickable?'pointer':'default'},title:clickable?(p.invoiceRequested?'클릭: 발행요청 취소':'클릭: 세금계산서 발행 요청'):'',onClick:clickable?()=>setP(i,'invoiceRequested',!p.invoiceRequested):null},sl);})()),
           E('td',{style:{width:40}},E('button',{className:'btn sm dng',style:{padding:'2px 6px'},onClick:()=>delP(p.id)},'✕'))
         );}))
-      )
+      ),
+      bondStrip(order.bonds,setOrderBond)
     ),
     order.payments.length>0&&E('button',{className:'btn sm',style:{margin:'6px 0 12px'},onClick:addGiseng},'+ 기성 추가'),
     ...order.subcontractors.map(sub=>E('div',{key:sub.id,className:'sub-block',style:{marginBottom:10}},
@@ -489,7 +508,8 @@ function ExpandedDetail({order,onUpdate}){
           E('td',null,E('input',{type:'date',value:p.paidDate||'',onChange:e=>setSP(sub.id,pi,'paidDate',e.target.value||null),style:{...iS,width:130}})),
           E('td',null,E('span',{className:`badge ${sc}`},sl))
         );}))
-      )
+      ),
+      bondStrip(sub.bonds,(k,f,v)=>setSubBond(sub.id,k,f,v),'보증보험(협력)')
     ))
   );
 }
