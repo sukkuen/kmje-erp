@@ -1538,7 +1538,7 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
           c.payPrinciple!==""&&E("div",{className:"cd-clause",style:{fontWeight:600}},fld(c.payPrinciple,v=>set({payPrinciple:v}),{width:"90%"})),
           ...c.pays.map((p,i)=>E("div",{className:"cd-clause",key:"p"+i,style:{display:"flex",gap:6,alignItems:"flex-start",flexWrap:"wrap"}},
             E("span",null,"▶ "),E("input",{className:"cd-field",value:p.label,onChange:e=>setPay(i,"label",e.target.value),style:{width:64}}),
-            E("input",{className:"cd-field",type:"number",value:p.pct,onChange:e=>setPay(i,"pct",Number(e.target.value)),style:{width:44,textAlign:"right"}}),E("span",null,"% "),
+            E("input",{className:"cd-field",type:"number",step:"0.01",value:p.pct,onChange:e=>setPay(i,"pct",Number(e.target.value)),style:{width:60,textAlign:"right"}}),E("span",null,"% "),
             E("span",{className:"mono"},"₩"+fmt(p.amount)),E("span",null," - "),
             E("textarea",{className:"cd-ta",ref:taRef,value:p.cond,onChange:e=>{setPay(i,"cond",e.target.value);taRef(e.target);},rows:1,style:{flex:1,minWidth:200}}))),
           E("div",{className:"cd-sec"},"3. 계약이행증권"),bondRow("perf","계약 시 계약이행증권 제출"),
