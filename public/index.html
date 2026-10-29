@@ -1494,6 +1494,9 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
   const fld=(val,on,style)=>E("input",{className:"cd-field",value:val||"",onChange:e=>on(e.target.value),style});
   const sizeInput=el=>{if(el){el.style.width="2px";el.style.width=(el.scrollWidth+4)+"px";}};
   const nameFld=(val,on,extra)=>E("input",{className:"cd-field",value:val||"",ref:sizeInput,onChange:e=>{on(e.target.value);sizeInput(e.target);},style:{textAlign:"center",minWidth:"70px",...(extra||{})}});
+  // 계약내용 라벨: 고정폭 + 균등분할(콜론 정렬)
+  const lblCell=t=>E("span",{style:{display:"inline-block",width:96,flexShrink:0,whiteSpace:"nowrap"}},"▶ ",E("span",{style:{display:"inline-block",width:66,textAlignLast:"justify"}},t),E("span",null," : "));
+  const infoRow=(label,content)=>E("div",{className:"cd-clause",style:{display:"flex",alignItems:"flex-start"}},lblCell(label),E("div",{style:{flex:1,minWidth:0}},content));
   const bondRow=(key,label)=>{const b=c.bonds[key];return E("div",{className:"cd-clause"},
     E("span",null,"▶ "+label+" : "),
     E("span",{className:"mono"},"₩"+fmt(b.amount)),E("span",null," ( 계약금액의 "),
@@ -1526,11 +1529,11 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
             nameFld(c.orderer.name,v=>setParty("orderer","name",v)),' (이하 : "발주자"라 한다)와 ',
             nameFld(c.supplier.name,v=>setParty("supplier","name",v)),' (이하 "수주자"라 한다)는 다음과 같이 계약을 체결한다.'),
           E("div",{className:"cd-sec"},"1. 계약 내용"),
-          E("div",{className:"cd-clause",style:{display:"flex",alignItems:"flex-start",gap:4}},E("span",{style:{whiteSpace:"nowrap"}},"▶ 품 명 : "),E("textarea",{className:"cd-ta",ref:taRef,value:c.title,onChange:e=>{set({title:e.target.value});taRef(e.target);},rows:1,style:{flex:1}})),
-          E("div",{className:"cd-clause"},"▶ 규 격 : ",fld(c.spec,v=>set({spec:v}),{width:"70%"})),
-          E("div",{className:"cd-clause"},"▶ 계약금액 : ",E("b",null,amountKor(c.amount)),"  (₩",E("input",{className:"cd-field mono",type:"text",inputMode:"numeric",value:fmt(c.amount),ref:sizeInput,onChange:e=>{setAmount(e.target.value.replace(/[^0-9]/g,""));sizeInput(e.target);},style:{textAlign:"right",minWidth:"40px"}}),")  ",c.vatSeparate?"V.A.T 별도":""),
-          E("div",{className:"cd-clause"},"▶ 계약기간 : ",E("input",{className:"cd-field",type:"date",value:c.startDate,onChange:e=>set({startDate:e.target.value})})," ~ ",E("input",{className:"cd-field",type:"date",value:c.endDate,onChange:e=>set({endDate:e.target.value})})),
-          E("div",{className:"cd-clause"},"▶ 납품장소 : ",fld(c.deliveryPlace,v=>set({deliveryPlace:v}),{width:"60%"})),
+          infoRow("품 명",E("textarea",{className:"cd-ta",ref:taRef,value:c.title,onChange:e=>{set({title:e.target.value});taRef(e.target);},rows:1,style:{width:"100%"}})),
+          infoRow("규 격",fld(c.spec,v=>set({spec:v}),{width:"92%"})),
+          infoRow("계 약 금 액",E("span",null,E("b",null,amountKor(c.amount)),"  (₩",E("input",{className:"cd-field mono",type:"text",inputMode:"numeric",value:fmt(c.amount),ref:sizeInput,onChange:e=>{setAmount(e.target.value.replace(/[^0-9]/g,""));sizeInput(e.target);},style:{textAlign:"right",minWidth:"40px"}}),")  ",c.vatSeparate?"V.A.T 별도":"")),
+          infoRow("계 약 기 간",E("span",null,E("input",{className:"cd-field",type:"date",value:c.startDate,onChange:e=>set({startDate:e.target.value})})," ~ ",E("input",{className:"cd-field",type:"date",value:c.endDate,onChange:e=>set({endDate:e.target.value})}))),
+          infoRow("납 품 장 소",fld(c.deliveryPlace,v=>set({deliveryPlace:v}),{width:"80%"})),
           E("div",{className:"cd-sec"},"2. 대금 지급 방법 (V.A.T 별도)"),
           c.payPrinciple!==""&&E("div",{className:"cd-clause",style:{fontWeight:600}},fld(c.payPrinciple,v=>set({payPrinciple:v}),{width:"90%"})),
           ...c.pays.map((p,i)=>E("div",{className:"cd-clause",key:"p"+i,style:{display:"flex",gap:6,alignItems:"flex-start",flexWrap:"wrap"}},
