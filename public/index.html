@@ -1447,6 +1447,7 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
     clauses:defaultClauses(type,x.defectMonths)}));
   const [selOrderId,setSelOrderId]=useState(c.orderId||"");
   const [selSubId,setSelSubId]=useState("");
+  const [saved,setSaved]=useState(false);
   const selOrder=(orders||[]).find(o=>o.id===selOrderId);
   const autoFill=()=>{
     const o=selOrder; if(!o){alert("수주를 먼저 선택하세요.");return;}
@@ -1469,7 +1470,7 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
     if(!pays.length)pays=c.pays;
     setC(x=>{const nx={...x,orderId:o.id,orderNo:o.orderNo,title,amount:amt,pays,startDate:o.startDate||"",endDate:o.endDate||"",orderer,supplier};return {...nx,bonds:recalc(amt,nx).bonds};});
   };
-  const doSave=()=>{const rec={...c};if(!rec.id)rec.id=uid();if(!rec.contractNo)rec.contractNo=makeContractNo(contracts,rec.date);onSave(rec);};
+  const doSave=()=>{const rec={...c};if(!rec.id)rec.id=uid();if(!rec.contractNo)rec.contractNo=makeContractNo(contracts,rec.date);setC(rec);onSave(rec);setSaved(true);setTimeout(()=>setSaved(false),2000);};
   // 인쇄 시 갑지(앞장)를 1페이지에 맞게 자동 축소
   useEffect(()=>{
     const regrow=()=>document.querySelectorAll(".contract-doc .cd-ta").forEach(t=>{t.style.height="auto";t.style.height=t.scrollHeight+"px";});
@@ -1515,7 +1516,8 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
           E("option",{value:""},"-- 협력업체 --"),
           ...((selOrder.subcontractors)||[]).map(s=>E("option",{key:s.id,value:s.id},s.name))),
         E("button",{className:"btn sm",onClick:autoFill},"↧ 자동채움"),
-        E("div",{style:{marginLeft:"auto",display:"flex",gap:6}},
+        E("div",{style:{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}},
+          saved&&E("span",{style:{color:"#16a34a",fontSize:12,fontWeight:700}},"✓ 저장됨"),
           E("button",{className:"btn sm",onClick:()=>window.print()},"🖨 인쇄"),
           E("button",{className:"btn pri sm",onClick:doSave},"저장"),
           E("button",{className:"btn sm",onClick:onClose},"닫기"))
@@ -1572,7 +1574,7 @@ function ContractList({contracts,orders,vendors,clients,saveContracts,saveVendor
   const [showVendors,setShowVendors]=useState(false);
   const [srch,setSrch]=useState("");
   const list=(contracts||[]).filter(c=>!srch||[(c.supplier&&c.supplier.name),(c.orderer&&c.orderer.name),c.title,c.contractNo].some(v=>(v||"").includes(srch))).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.contractNo||"").localeCompare(a.contractNo||""));
-  const saveOne=rec=>{const ex=(contracts||[]).find(x=>x.id===rec.id);if(ex)saveContracts(contracts.map(x=>x.id===rec.id?rec:x));else saveContracts([...(contracts||[]),rec]);setEditing(null);};
+  const saveOne=rec=>{const ex=(contracts||[]).find(x=>x.id===rec.id);if(ex)saveContracts(contracts.map(x=>x.id===rec.id?rec:x));else saveContracts([...(contracts||[]),rec]);};
   const del=id=>{if(window.confirm("이 계약서를 삭제하시겠습니까?"))saveContracts((contracts||[]).filter(x=>x.id!==id));};
   const dup=rec=>setEditing({...rec,id:"",contractNo:"",date:today,status:"작성중"});
   const toggleStatus=c=>saveContracts((contracts||[]).map(x=>x.id===c.id?{...x,status:(x.status==="완료"?"작성중":"완료")}:x));
