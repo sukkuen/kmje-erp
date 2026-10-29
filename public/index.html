@@ -76,7 +76,7 @@ tbody tr:last-child td{border-bottom:none;}
 .cd-clause{margin:2px 0;}
 .cd-cover .cd-clause{padding-left:20px;}
 .cd-clause-t{font-weight:700;}
-.cd-cover{transform-origin:top left;}
+.cd-cover{transform-origin:top center;}
 .contract-doc input[type=date].cd-field{width:108px;}
 @media print{ .contract-doc input[type=date].cd-field{width:88px;} .contract-doc input[type=date].cd-field::-webkit-calendar-picker-indicator{display:none;} }
 @media print{
@@ -1481,7 +1481,7 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
       cover.style.transform="none"; wrap.style.height="auto"; void cover.offsetHeight;
       const h=cover.scrollHeight, availH=1010;
       const s=h>availH?Math.max(0.35,availH/h):1;
-      cover.style.transformOrigin="top left";
+      cover.style.transformOrigin="top center";
       cover.style.transform=s<1?"scale("+s.toFixed(4)+")":"none";
       wrap.style.height=s<1?Math.ceil(h*s)+"px":"auto";
       doc.style.width=prevW; doc.style.padding=prevP;
