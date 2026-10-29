@@ -1455,19 +1455,19 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
       const sub=(o.subcontractors||[]).find(s=>s.id===selSubId);
       if(!sub){alert("협력업체를 선택하세요.");return;}
       amt=sub.contractAmount||0;
-      pays=(sub.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*100):0,amount:p.amount||0,cond:payCond(p.type)}));
+      pays=(sub.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*10000)/100:0,amount:p.amount||0,cond:payCond(p.type)}));
       const v=(vendors||[]).find(x=>x.name===sub.name)||{};
       supplier={name:v.name||sub.name,bizNo:v.bizNo||"",ceo:v.ceo||"",address:v.address||""};
       orderer={...KMJE_INFO};
     } else {
       amt=o.projectAmount||0;
-      pays=(o.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*100):0,amount:p.amount||0,cond:payCond(p.type)}));
+      pays=(o.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*10000)/100:0,amount:p.amount||0,cond:payCond(p.type)}));
       const cl=(clients||[]).find(x=>x.name===o.clientName)||{};
       orderer={name:cl.name||o.clientName,bizNo:cl.bizNo||"",ceo:cl.ceo||"",address:cl.address||""};
       supplier={...KMJE_INFO};
     }
     if(!pays.length)pays=c.pays;
-    setC(x=>({...x,orderId:o.id,orderNo:o.orderNo,title,amount:amt,pays,startDate:o.startDate||"",endDate:o.endDate||"",orderer,supplier,...recalc(amt,{...x,pays})}));
+    setC(x=>{const nx={...x,orderId:o.id,orderNo:o.orderNo,title,amount:amt,pays,startDate:o.startDate||"",endDate:o.endDate||"",orderer,supplier};return {...nx,bonds:recalc(amt,nx).bonds};});
   };
   const doSave=()=>{const rec={...c};if(!rec.id)rec.id=uid();if(!rec.contractNo)rec.contractNo=makeContractNo(contracts,rec.date);onSave(rec);};
   // 인쇄 시 갑지(앞장)를 1페이지에 맞게 자동 축소
