@@ -1575,6 +1575,7 @@ function ContractList({contracts,orders,vendors,clients,saveContracts,saveVendor
   const saveOne=rec=>{const ex=(contracts||[]).find(x=>x.id===rec.id);if(ex)saveContracts(contracts.map(x=>x.id===rec.id?rec:x));else saveContracts([...(contracts||[]),rec]);setEditing(null);};
   const del=id=>{if(window.confirm("이 계약서를 삭제하시겠습니까?"))saveContracts((contracts||[]).filter(x=>x.id!==id));};
   const dup=rec=>setEditing({...rec,id:"",contractNo:"",date:today,status:"작성중"});
+  const toggleStatus=c=>saveContracts((contracts||[]).map(x=>x.id===c.id?{...x,status:(x.status==="완료"?"작성중":"완료")}:x));
   const other=c=>c.type==="vendor"?(c.supplier&&c.supplier.name):(c.orderer&&c.orderer.name);
   if(editing)return E(ContractEditor,{contract:editing,contracts,orders,vendors,clients,onSave:saveOne,onClose:()=>setEditing(null)});
   return E(Fragment,null,
@@ -1602,7 +1603,7 @@ function ContractList({contracts,orders,vendors,clients,saveContracts,saveVendor
                 E("td",{style:{color:"#64748b",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},c.title||"—"),
                 E("td",{className:"mono",style:{textAlign:"right"}},fmt(c.amount)+"원"),
                 E("td",{style:{fontSize:11,color:"#64748b"}},c.date),
-                E("td",null,E("span",{className:"badge "+(c.status==="완료"?"b-green":"b-gray")},c.status||"작성중")),
+                E("td",null,E("span",{className:"badge "+(c.status==="완료"?"b-green":"b-gray"),onClick:()=>toggleStatus(c),title:"클릭하여 상태 변경 (작성중 ↔ 완료)",style:{cursor:"pointer",userSelect:"none"}},c.status||"작성중")),
                 E("td",{style:{padding:"4px 6px"}},E("div",{style:{display:"flex",gap:4}},
                   E("button",{className:"btn sm",onClick:()=>setEditing(c)},"열기"),
                   E("button",{className:"btn sm",onClick:()=>dup(c)},"복제"),
