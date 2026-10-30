@@ -1456,13 +1456,13 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
       const sub=(o.subcontractors||[]).find(s=>s.id===selSubId);
       if(!sub){alert("협력업체를 선택하세요.");return;}
       amt=sub.contractAmount||0;
-      pays=(sub.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*10000)/100:0,amount:p.amount||0,cond:payCond(p.type)}));
+      pays=(sub.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*10000)/100:0,amount:p.amount||0,cond:p.condition||payCond(p.type)}));
       const v=(vendors||[]).find(x=>x.name===sub.name)||{};
       supplier={name:v.name||sub.name,bizNo:v.bizNo||"",ceo:v.ceo||"",address:v.address||""};
       orderer={...KMJE_INFO};
     } else {
       amt=o.projectAmount||0;
-      pays=(o.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*10000)/100:0,amount:p.amount||0,cond:payCond(p.type)}));
+      pays=(o.payments||[]).map(p=>({label:p.type,pct:amt>0?Math.round((p.amount||0)/amt*10000)/100:0,amount:p.amount||0,cond:p.condition||payCond(p.type)}));
       const cl=(clients||[]).find(x=>x.name===o.clientName)||{};
       orderer={name:cl.name||o.clientName,bizNo:cl.bizNo||"",ceo:cl.ceo||"",address:cl.address||""};
       supplier={...KMJE_INFO};
@@ -1568,13 +1568,16 @@ function ContractEditor({contract,contracts,orders,vendors,clients,onSave,onClos
 }
 
 // ── ContractList (계약서 히스토리) ───────────────────────
-function ContractList({contracts,orders,vendors,clients,saveContracts,saveVendors}){
+function ContractList({contracts,orders,vendors,clients,saveContracts,saveVendors,saveClients}){
   const E=React.createElement;
   const [editing,setEditing]=useState(null);
   const [showVendors,setShowVendors]=useState(false);
   const [srch,setSrch]=useState("");
   const list=(contracts||[]).filter(c=>!srch||[(c.supplier&&c.supplier.name),(c.orderer&&c.orderer.name),c.title,c.contractNo].some(v=>(v||"").includes(srch))).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.contractNo||"").localeCompare(a.contractNo||""));
-  const saveOne=rec=>{const ex=(contracts||[]).find(x=>x.id===rec.id);if(ex)saveContracts(contracts.map(x=>x.id===rec.id?rec:x));else saveContracts([...(contracts||[]),rec]);};
+  const saveOne=rec=>{const ex=(contracts||[]).find(x=>x.id===rec.id);if(ex)saveContracts(contracts.map(x=>x.id===rec.id?rec:x));else saveContracts([...(contracts||[]),rec]);
+    // 계약서 저장 시 상대방을 명부에 자동 등록 (이름 기준 중복 방지)
+    if(rec.type==="vendor"){const s=rec.supplier||{},nm=(s.name||"").trim();if(nm&&!(vendors||[]).some(v=>(v.name||"").trim()===nm))saveVendors([...(vendors||[]),{id:uid(),name:nm,bizNo:s.bizNo||"",ceo:s.ceo||"",address:s.address||""}]);}
+    else if(rec.type==="client"){const o=rec.orderer||{},nm=(o.name||"").trim();if(nm&&saveClients&&!(clients||[]).some(c=>(c.name||"").trim()===nm))saveClients([...(clients||[]),{id:uid(),name:nm,bizNo:o.bizNo||"",ceo:o.ceo||"",address:o.address||""}]);}};
   const del=id=>{if(window.confirm("이 계약서를 삭제하시겠습니까?"))saveContracts((contracts||[]).filter(x=>x.id!==id));};
   const dup=rec=>setEditing({...rec,id:"",contractNo:"",date:today,status:"작성중"});
   const toggleStatus=c=>saveContracts((contracts||[]).map(x=>x.id===c.id?{...x,status:(x.status==="완료"?"작성중":"완료")}:x));
@@ -1710,7 +1713,7 @@ function App(){
       tab==="dashboard"&&E(Dashboard,{orders,saveOrders:saveO}),
       tab==="clients"&&E(ClientList,{clients,saveClients:saveCl,orders,saveOrders:saveO}),
       tab==="orders"&&E(OrderList,{orders,saveOrders:saveO,managers:mgrs,clients}),
-      tab==="contracts"&&E(ContractList,{contracts,orders,vendors,clients,saveContracts,saveVendors}),
+      tab==="contracts"&&E(ContractList,{contracts,orders,vendors,clients,saveContracts,saveVendors,saveClients:saveCl}),
       tab==="forecast"&&E(CashForecast,{orders}),
       tab==="cashflow"&&E(CashFlow,{orders,cfData,saveCf,cfPassword,savePw,onLock:()=>{setCfUnlocked(false);setTab("dashboard");}})
     )
