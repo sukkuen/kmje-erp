@@ -204,11 +204,15 @@ function typeLabel(l){
   return '연차';
 }
 const daysBetween=(a,b)=>Math.round((new Date(b)-new Date(a))/86400000)+1;
-// 'HH:MM'~'HH:MM' → 시간 수(정수, 시간 단위). 마치는 시각이 더 빠르면 0.
+// 'HH:MM'~'HH:MM' → 시간 수(정수, 시간 단위). 점심시간(12:00~13:00)과 겹치는 부분은 제외. 마치는 시각이 더 빠르면 0.
 function hoursBetween(s,e){
   if(!s||!e) return 0;
   const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
-  const mins=(eh*60+em)-(sh*60+sm);
+  const sMin=sh*60+sm, eMin=eh*60+em;
+  let mins=eMin-sMin;
+  if(mins<=0) return 0;
+  const lunch=Math.min(eMin,13*60)-Math.max(sMin,12*60);
+  if(lunch>0) mins-=lunch;
   return mins>0?Math.round(mins/60*100)/100:0;
 }
 // 시각 선택용 정시 목록 (06:00 ~ 22:00, 분 단위 없음)
@@ -382,7 +386,7 @@ function ApplyTab({emps,leaves,saveLeaves}){
     let rec;
     if(type==='hour'){
       const hc=hoursBetween(stime,etime);
-      if(hc<=0){ setMsg({t:'마치는 시각이 시작 시각보다 늦어야 합니다.',c:'#dc2626'}); return; }
+      if(hc<=0){ setMsg({t:'시간 수가 0입니다. 시각을 확인해 주세요. (점심시간 12~13시는 제외됩니다)',c:'#dc2626'}); return; }
       rec={lid:uid(),emp:empId,start,end:start,type:'hour',stime,etime,hours:hc,days:Math.round(hc/HPD*100)/100,reason:reason||'개인 사유',status:'pending'};
     } else {
       const ed=end||start;
