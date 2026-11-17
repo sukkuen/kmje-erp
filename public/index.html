@@ -515,21 +515,22 @@ function ExpandedDetail({order,onUpdate}){
 }
 
 // ── OrderModal ───────────────────────────────────────────
-function OrderModal({order,onSave,onClose,managers,clients,orders}){
+function OrderModal({order,onSave,onClose,managers,clients,orders,year}){
   const E=React.createElement;
   const[f,setF]=useState(order?{...order,currency:order.currency||'KRW'}:{id:'',orderNo:'',orderType:'구두발주',clientName:'',description:'',manager:'김경래',startDate:'',endDate:'',projectAmount:0,currency:'KRW',note:'',payments:[mkP("계약금",0),mkP("잔금",0)],subcontractors:[]});
   const sf=(k,v)=>setF(x=>({...x,[k]:v}));
   const autoOrderNo=(clientName)=>{
     const cl=(clients||[]).find(c=>c.name===clientName);
     if(!cl)return f.orderNo;
-    const yr=new Date().getFullYear().toString().slice(2);
+    const baseYr=(f.startDate&&/^\d{4}/.test(f.startDate))?f.startDate.slice(0,4):(/^\d{4}$/.test(year||'')?year:String(new Date().getFullYear()));
+    const yr=baseYr.slice(2);
     const code=cl.code.padStart(2,'0');
-    // 전체 수주의 순번(뒷자리) 중 최댓값 기준으로 다음 순번 결정
+    // 같은 연도(앞 2자리) 수주의 순번 중 최댓값 기준 → 연도마다 001부터 시작
     let maxSeq=0;
     (orders||[]).forEach(o=>{
       const no=o.orderNo||'';
       const parts=no.split('-');
-      if(parts.length===2){const seq=parseInt(parts[1]||'0');if(seq>maxSeq)maxSeq=seq;}
+      if(parts.length===2&&parts[0].slice(0,2)===yr){const seq=parseInt(parts[1]||'0');if(seq>maxSeq)maxSeq=seq;}
     });
     const nextSeq=String(maxSeq+1).padStart(3,'0');
     return yr+code+'-'+nextSeq;
@@ -698,8 +699,9 @@ function DeleteModal({message,onConfirm,onClose}){
 // ── YearSelect ────────────────────────────────────────────
 function YearSelect({orders,onSelect}){
   const E=React.createElement;
-  const years=[...new Set(orders.map(o=>o.startDate?.slice(0,4)||'미정'))].sort((a,b)=>b.localeCompare(a));
-  if(years.length===0)years.push(String(new Date().getFullYear()));
+  const cy=new Date().getFullYear();
+  // 올해와 내년은 수주가 없어도 항상 선택지로 노출 (미리 준비)
+  const years=[...new Set([...orders.map(o=>o.startDate?.slice(0,4)||'미정'),String(cy),String(cy+1)])].sort((a,b)=>b.localeCompare(a));
   return E('div',null,
     E('div',{style:{fontSize:14,fontWeight:700,marginBottom:16}},'수주현황 — 연도 선택'),
     E('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}},
@@ -796,7 +798,7 @@ function OrderList({orders,saveOrders,managers,clients}){
   const STATUS_OPTS=['전체','미수','진행중','완료','금액미정'];
   const yearTotal=yearOrders.reduce((s,o)=>s+(o.projectAmount||0),0);
   return E(Fragment,null,
-    modal&&E(OrderModal,{order:modal==='new'?null:modal,onSave:save,onClose:()=>setModal(null),managers,clients,orders}),
+    modal&&E(OrderModal,{order:modal==='new'?null:modal,onSave:save,onClose:()=>setModal(null),managers,clients,orders,year}),
     delTarget&&E(DeleteModal,{
       message:E('span',null,'거래처 ',E('strong',null,delTarget.clientName),' / ',E('span',{style:{color:'#1e40af'}},delTarget.description||delTarget.orderNo),' 수주 건이 영구 삭제됩니다.'),
       onConfirm:confirmDel,onClose:()=>setDelTarget(null)
